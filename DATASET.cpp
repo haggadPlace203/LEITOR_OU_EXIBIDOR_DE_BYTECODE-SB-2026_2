@@ -3,6 +3,8 @@
 #include <string>
 #include <cstdint> // Para uint8_t
 
+// EXEMPLO TESTE NÃO OFICIAL
+
 int main() {
     // Cria o dicionário: Chave (uint8_t / byte) -> Valor (std::string)
     std::unordered_map<uint8_t, std::string> dicionarioBytes;
