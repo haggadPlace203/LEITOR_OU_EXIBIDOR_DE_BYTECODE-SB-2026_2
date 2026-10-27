@@ -12,7 +12,7 @@ int main() {
     // 1. Inserindo dados (Exemplo com prefixos hexadecimais ou decimais)
     dicionarioBytes[0x01] = "Comando Iniciar";
     dicionarioBytes[0x02] = "Comando Parar";
-    dicionarioBytes[0xFF] = "Erro Crítico";
+    dicionarioBytes[0xFF] = "Erro Critico";
 
     // 2. Buscando um valor
     uint8_t byteRecebido = 0x02;
