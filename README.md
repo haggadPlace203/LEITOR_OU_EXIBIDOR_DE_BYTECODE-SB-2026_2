@@ -42,7 +42,6 @@ DATASET.exe
 
 ```text
 ├── DATASET.cpp          # Código-fonte principal do Leitor/Exibidor
-├── DATASET.exe          # Executável gerado após compilação (ignorado no .gitignore)
 ├── exemplos/            # Pasta contendo arquivos .class para testes
 └── README.md            # Documentação do projeto
 ```
