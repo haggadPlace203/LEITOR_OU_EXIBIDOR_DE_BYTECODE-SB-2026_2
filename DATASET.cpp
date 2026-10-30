@@ -5,7 +5,6 @@
 /*           Brasília - DF - 30/10/2026             */
 /*==================================================*/
 
-
 #include <iostream>
 #include <unordered_map>
 #include <string>
