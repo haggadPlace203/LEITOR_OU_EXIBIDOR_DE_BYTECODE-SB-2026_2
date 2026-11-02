@@ -2,36 +2,57 @@
 #include <fstream>
 #include <vector>
 
-void processChunk(const char* data, std::streamsize size) {
-    // Processamento isolado do segmento carregado no buffer
+// Função de exemplo que recebe o ponteiro do buffer e o tamanho do bloco atual para processamento
+void chunck_loader(const char* data, std::streamsize size){
+    // Insira aqui a lógica para tratar os dados do bloco atual
 }
 
-int main() {
+int main(){
+
+    /*===============  SESSAO DE CONFIGURACAO E OTIMIZACAO   =================*/
+    // Desliga a sincronização com os fluxos do C para acelerar as operações de E/S
     std::ios_base::sync_with_stdio(false);
+    // Desvincula o canal de entrada (cin) do de saída (cout) para otimizar a performance
     std::cin.tie(NULL);
 
-    const std::string filename = "arquivo_muito_grande.bin";
-
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open()) {
-        std::cerr << "Erro: Nao foi possivel abrir o arquivo " << filename << std::endl;
+    /*==============  SESSAO DE ALGORITMO JAVA CLASS LOADER   ================*/
+    /* 1 - Criacao de buffer & preparacao das chuncks*/
+    // Define o nome ou o caminho constante do arquivo que você quer carregar
+    const std::string Class_Route = "JAVA/TA1.class";
+    // Abre o arquivo em modo binário puro para preservar a integridade dos dados originais
+    std::ifstream file(Class_Route, std::ios::binary);
+    // Verifica se o arquivo NÃO conseguiu ser aberto (ex: arquivo inexistente ou sem permissão)
+    if (!file.is_open()){
+        // Exibe uma mensagem de erro no fluxo padrão de erro do console
+        std::cerr << "Erro: Nao foi possivel abrir o arquivo " << Class_Route << std::endl;
+        // Encerra o programa retornando 1 (indicando falha)
         return 1;
     }
 
-    constexpr size_t CHUNK_SIZE = 64 * 1024; // 64 KB
+
+    /*2 - Leitura & processamento das chuncks*/
+    // Define em tempo de compilação o tamanho de cada bloco (64 KB = 64 * 1024 bytes)
+    constexpr size_t CHUNK_SIZE = 64 * 1024;
+    // Aloca o buffer dinâmico na RAM com o tamanho exato do chunk definido
     std::vector<char> buffer(CHUNK_SIZE);
-
-    while (file.read(buffer.data(), CHUNK_SIZE) || file.gcount() > 0) {
-        std::streamsize bytesRead = file.gcount();
-        processChunk(buffer.data(), bytesRead);
+    // lê um bloco completo OU garante que o último pedaço parcial do arquivo seja processado
+    while (file.read(buffer.data(), CHUNK_SIZE) || file.gcount() > 0){
+        // Obtém a quantidade exata de bytes que foram efetivamente lidos nesta iteração
+        std::streamsize CHUNK = file.gcount();
+        // Passa o endereço dos dados do buffer e o tamanho real para a função de tratamento
+        chunck_loader(buffer.data(), CHUNK);
     }
-
-    if (file.bad()) {
+    // Verifica se ocorreu algum erro físico ou falha crítica de hardware/I/O no disco
+    if (file.bad()){
+        // Exibe a mensagem de erro crítico no console
         std::cerr << "Erro crítico de E/S durante a leitura do arquivo." << std::endl;
+        // Encerra o programa retornando 1 (falha)
         return 1;
     }
-
+    // Informa na tela que todo o processo de leitura em blocos terminou perfeitamente
     std::cout << "Leitura concluída com sucesso." << std::endl;
+
+    // Retorna 0 para indicar ao sistema operacional que o programa terminou sem erros
     return 0;
 }
 
