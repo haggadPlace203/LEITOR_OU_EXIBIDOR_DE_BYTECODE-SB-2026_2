@@ -1,10 +1,18 @@
+/*==================================================*/
+/*  Informações sobre o desenvolvedor & assinatura  */
+/*   Carlos Luan Silva Pereira - Eng. Mecatrônica   */
+/*       Estudante da Universidade de Brasília      */
+/*           Brasília - DF - 02/11/2026             */
+/*==================================================*/
+
 #include <iostream>
 #include <fstream>
 #include <vector>
 
 // Função de exemplo que recebe o ponteiro do buffer e o tamanho do bloco atual para processamento
-void chunck_loader(const char* data, std::streamsize size){
+void chunck_loader(const char* data, std::streamsize size, int x){
     // Insira aqui a lógica para tratar os dados do bloco atual
+    std::cout << "Chunck " << x << " processada" << std::endl;
 }
 
 int main(){
@@ -36,11 +44,13 @@ int main(){
     // Aloca o buffer dinâmico na RAM com o tamanho exato do chunk definido
     std::vector<char> buffer(CHUNK_SIZE);
     // lê um bloco completo OU garante que o último pedaço parcial do arquivo seja processado
+    int i = 0;
     while (file.read(buffer.data(), CHUNK_SIZE) || file.gcount() > 0){
         // Obtém a quantidade exata de bytes que foram efetivamente lidos nesta iteração
         std::streamsize CHUNK = file.gcount();
         // Passa o endereço dos dados do buffer e o tamanho real para a função de tratamento
-        chunck_loader(buffer.data(), CHUNK);
+        chunck_loader(buffer.data(), CHUNK, i);
+        i++;
     }
     // Verifica se ocorreu algum erro físico ou falha crítica de hardware/I/O no disco
     if (file.bad()){
@@ -61,6 +71,11 @@ int main(){
 /*                     Comentários Auxiliares                         */
 /*                                                                    */
 /* Descrição Detalhada da Implementação e Leitura em Chunks:          */
+/*                                                                    */
+/* [0. Configuração do Buffer de Memória para Arquivos Binários]      */
+/* - Tamanho sugerido: 64 KB a 2 MB (Otimizado para I/O massivo)      */
+/* - Reduz chamadas de sistema (syscalls) e otimiza leitura em SSD/HD */
+/* - Exemplo: const size_t BUFFER_SIZE = 1024 * 1024; // 1 MB         */
 /*                                                                    */
 /* [1. Importação de Módulos Essenciais]                              */
 /* - <iostream>: Disponibiliza os canais padrão de saída e erro       */
@@ -97,4 +112,9 @@ int main(){
 /* [7. Auditoria de Falhas de E/S e Encerramento]                     */
 /* - Emprego de file.bad() para detectar anomalias físicas na mídia.  */
 /* - Conclusão do programa retornando código de sucesso ao SO.        */
+/*                                                                    */
+/* [8. Compando g++ para cxompilar]                                   */
+/* - Compilar com: "g++ CARREGADOR.cpp -std=c++11 -o CARREGADOR.exe"  */
 /*====================================================================*/
+
+/*!!!Assinado Por CLSP & Cruzeirão Prof. M. Ladeira!!!*/
