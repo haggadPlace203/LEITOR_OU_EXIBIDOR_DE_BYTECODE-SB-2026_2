@@ -12,7 +12,7 @@
 #include <string>
 #include <cstdint>
 
-// Função compatível com -std=c++11 que retorna o mapa imutável global
+// Função que retorna o mapa imutável global
 inline const std::unordered_map<uint8_t, std::string>& get_instruction(){
     static const std::unordered_map<uint8_t, std::string> BYTECODE = []{
         std::unordered_map<uint8_t, std::string> map;
