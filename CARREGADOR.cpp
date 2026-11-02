@@ -8,11 +8,45 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <iomanip> // Necessário para formatação de saída (std::hex, std::setw, std::setfill)
 
-// Função de exemplo que recebe o ponteiro do buffer e o tamanho do bloco atual para processamento
+#define CLUSTER 1 //tamanho de cada chunck
+
+// Função que recebe o ponteiro do buffer e o tamanho do bloco atual para processamento
 void chunck_loader(const char* data, std::streamsize size, int x){
-    // Insira aqui a lógica para tratar os dados do bloco atual
-    std::cout << "Chunck " << x << " processada" << std::endl;
+    
+    // Define o tamanho fixo padrão do chunk (64 KB) para o cálculo correto dos endereços globais
+    constexpr size_t CHUNK_SIZE = 64 * CLUSTER;
+    // Calcula o deslocamento (offset) inicial deste chunk específico no arquivo inteiro
+    size_t base_offset = static_cast<size_t>(x) * CHUNK_SIZE;
+    // Loop externo que percorre os dados do chunk avançando de 16 em 16 bytes (cada linha da tabela)
+    for (std::streamsize i = 0; i < size; i += 16){
+        // Imprime o endereço de memória atual formatado em hexadecimal (8 dígitos, com zeros à esquerda)
+        std::cout << std::hex << std::setw(8) << std::setfill('0') << (base_offset + i) << "  ";
+        // Loop interno que percorre as 16 colunas (de 0 a F) da linha atual
+        for (int j = 0; j < 16; ++j){
+            // Verifica se a posição atual do byte ainda está dentro do limite real do chunk
+            if (i + j < size) {
+                // Converte o byte bruto para 'unsigned char' para evitar valores negativos indesejados
+                unsigned char byte_val = static_cast<unsigned char>(data[i + j]);
+                // Imprime o valor do byte em hexadecimal com 2 dígitos, preenchendo com zero à esquerda
+                std::cout << std::setw(2) << std::setfill('0') << static_cast<int>(byte_val) << " ";
+            } 
+            else{
+                // Se o arquivo acabou e a última linha ficou incompleta, imprime espaços em branco para alinhar
+                std::cout << "   ";
+            }
+        }
+        // Quebra a linha no console após imprimir os 16 bytes (colunas 0 a F)
+        std::cout << "\n";
+    }
+
+    // Restaura o formato numérico padrão do console de volta para decimal
+    std::cout << std::dec;
+    // Imprime a mensagem solicitada informando que o chunk atual foi processado com sucesso
+    std::cout << "Chunck " << x << " processada\n";
+    // Imprime uma linha divisoria visual para separar os blocos no console
+    std::cout << "--------------------------------------------------------\n";
 }
 
 int main(){
@@ -40,7 +74,7 @@ int main(){
 
     /*2 - Leitura & processamento das chuncks*/
     // Define em tempo de compilação o tamanho de cada bloco (64 KB = 64 * 1024 bytes)
-    constexpr size_t CHUNK_SIZE = 64 * 1024;
+    constexpr size_t CHUNK_SIZE = 64 * CLUSTER;
     // Aloca o buffer dinâmico na RAM com o tamanho exato do chunk definido
     std::vector<char> buffer(CHUNK_SIZE);
     // lê um bloco completo OU garante que o último pedaço parcial do arquivo seja processado
@@ -55,12 +89,12 @@ int main(){
     // Verifica se ocorreu algum erro físico ou falha crítica de hardware/I/O no disco
     if (file.bad()){
         // Exibe a mensagem de erro crítico no console
-        std::cerr << "Erro crítico de E/S durante a leitura do arquivo." << std::endl;
+        std::cerr << "Erro critico de E/S durante a leitura do arquivo." << std::endl;
         // Encerra o programa retornando 1 (falha)
         return 1;
     }
     // Informa na tela que todo o processo de leitura em blocos terminou perfeitamente
-    std::cout << "Leitura concluída com sucesso." << std::endl;
+    std::cout << "Leitura concluida com sucesso." << std::endl;
 
     // Retorna 0 para indicar ao sistema operacional que o programa terminou sem erros
     return 0;
