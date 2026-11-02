@@ -28,20 +28,22 @@ O software atua como uma ferramenta de engenharia reversa e análise estática, 
 Abra o Prompt de Comando (CMD) ou terminal na pasta raiz do projeto e execute o comando abaixo para gerar o executável:
 
 ```bash
-g++ DATASET.cpp -o DATASET.exe
+g++ teste.cpp -std=c++11 -o teste.exe
 ```
 
 ### 2. Execução
 Após a compilação bem-sucedida, você pode rodar o programa passando o arquivo `.class` que deseja analisar como parâmetro (caso seu código mude para aceitar argumentos via `argv`) ou simplesmente executando o arquivo:
 
 ```bash
-DATASET.exe
+teste.exe
 ```
 
 ## 📁 Estrutura sugerida do Repositório
 
 ```text
-├── DATASET.cpp          # Código-fonte principal do Leitor/Exibidor
-├── exemplos/            # Pasta contendo arquivos .class para testes
+├── JAVA/                # Pasta contendo arquivos JAVA para testes
+├── BYTECODE.h           # Estrutura de dados com tabela hash
+├── TMP/                 # Pasta contendo arquivos temporários
+├── teste.cpp            # Arquivo teste
 └── README.md            # Documentação do projeto
 ```
