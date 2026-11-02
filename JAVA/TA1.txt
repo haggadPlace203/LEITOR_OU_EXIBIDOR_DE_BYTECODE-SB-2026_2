@@ -1,0 +1,95 @@
+Classfile /C:/Users/carlo/OneDrive/Área de Trabalho/Assembly/JAVA/TA1.class
+  Last modified 15/09/2026; size 648 bytes
+  MD5 checksum 579597d1f50dd47cf628cd956cacc9de
+  Compiled from "TA1.java"
+public class TA1
+  minor version: 0
+  major version: 52
+  flags: ACC_PUBLIC, ACC_SUPER
+Constant pool:
+   #1 = Methodref          #11.#20        // java/lang/Object."<init>":()V
+   #2 = Fieldref           #21.#22        // java/lang/System.out:Ljava/io/PrintStream;
+   #3 = Class              #23            // java/lang/StringBuilder
+   #4 = Methodref          #3.#20         // java/lang/StringBuilder."<init>":()V
+   #5 = String             #24            // O resultado da soma eh:
+   #6 = Methodref          #3.#25         // java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+   #7 = Methodref          #3.#26         // java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+   #8 = Methodref          #3.#27         // java/lang/StringBuilder.toString:()Ljava/lang/String;
+   #9 = Methodref          #28.#29        // java/io/PrintStream.println:(Ljava/lang/String;)V
+  #10 = Class              #30            // TA1
+  #11 = Class              #31            // java/lang/Object
+  #12 = Utf8               <init>
+  #13 = Utf8               ()V
+  #14 = Utf8               Code
+  #15 = Utf8               LineNumberTable
+  #16 = Utf8               main
+  #17 = Utf8               ([Ljava/lang/String;)V
+  #18 = Utf8               SourceFile
+  #19 = Utf8               TA1.java
+  #20 = NameAndType        #12:#13        // "<init>":()V
+  #21 = Class              #32            // java/lang/System
+  #22 = NameAndType        #33:#34        // out:Ljava/io/PrintStream;
+  #23 = Utf8               java/lang/StringBuilder
+  #24 = Utf8               O resultado da soma eh:
+  #25 = NameAndType        #35:#36        // append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+  #26 = NameAndType        #35:#37        // append:(I)Ljava/lang/StringBuilder;
+  #27 = NameAndType        #38:#39        // toString:()Ljava/lang/String;
+  #28 = Class              #40            // java/io/PrintStream
+  #29 = NameAndType        #41:#42        // println:(Ljava/lang/String;)V
+  #30 = Utf8               TA1
+  #31 = Utf8               java/lang/Object
+  #32 = Utf8               java/lang/System
+  #33 = Utf8               out
+  #34 = Utf8               Ljava/io/PrintStream;
+  #35 = Utf8               append
+  #36 = Utf8               (Ljava/lang/String;)Ljava/lang/StringBuilder;
+  #37 = Utf8               (I)Ljava/lang/StringBuilder;
+  #38 = Utf8               toString
+  #39 = Utf8               ()Ljava/lang/String;
+  #40 = Utf8               java/io/PrintStream
+  #41 = Utf8               println
+  #42 = Utf8               (Ljava/lang/String;)V
+{
+  public TA1();
+    descriptor: ()V
+    flags: ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: return
+      LineNumberTable:
+        line 1: 0
+
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=3, locals=4, args_size=1
+         0: bipush        15
+         2: istore_1
+         3: iconst_5
+         4: istore_2
+         5: iload_1
+         6: iload_2
+         7: iadd
+         8: istore_3
+         9: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
+        12: new           #3                  // class java/lang/StringBuilder
+        15: dup
+        16: invokespecial #4                  // Method java/lang/StringBuilder."<init>":()V
+        19: ldc           #5                  // String O resultado da soma eh:
+        21: invokevirtual #6                  // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+        24: iload_3
+        25: invokevirtual #7                  // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+        28: invokevirtual #8                  // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+        31: invokevirtual #9                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+        34: return
+      LineNumberTable:
+        line 3: 0
+        line 4: 3
+        line 5: 5
+        line 7: 9
+        line 8: 34
+}
+SourceFile: "TA1.java"
