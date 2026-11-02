@@ -7,30 +7,34 @@
 
 #include <iostream>
 #include <fstream>
-#include <vector>
+#include <vector>  // Necessario para trabalhar com vetores
+#include <cstring> // Necessario para trabalhar com strings
 #include <iomanip> // Necessário para formatação de saída (std::hex, std::setw, std::setfill)
 
 #define CLUSTER 1 //tamanho de cada chunck
 
 // Função que recebe o ponteiro do buffer e o tamanho do bloco atual para processamento
 void chunck_loader(const char* data, std::streamsize size, int x){
-    
+
+    /*===========  funcao oficial para tratamento de cada pedaco  ==========*/
+
+    /*===========  Apenas para vizualizacao e testes  ==========*/
     // Define o tamanho fixo padrão do chunk (64 KB) para o cálculo correto dos endereços globais
     constexpr size_t CHUNK_SIZE = 64 * CLUSTER;
     // Calcula o deslocamento (offset) inicial deste chunk específico no arquivo inteiro
-    size_t base_offset = static_cast<size_t>(x) * CHUNK_SIZE;
+    size_t offset = static_cast<size_t>(x) * CHUNK_SIZE;
     // Loop externo que percorre os dados do chunk avançando de 16 em 16 bytes (cada linha da tabela)
     for (std::streamsize i = 0; i < size; i += 16){
         // Imprime o endereço de memória atual formatado em hexadecimal (8 dígitos, com zeros à esquerda)
-        std::cout << std::hex << std::setw(8) << std::setfill('0') << (base_offset + i) << "  ";
+        std::cout << std::hex << std::setw(8) << std::setfill('0') << (offset + i) << "  ";
         // Loop interno que percorre as 16 colunas (de 0 a F) da linha atual
         for (int j = 0; j < 16; ++j){
             // Verifica se a posição atual do byte ainda está dentro do limite real do chunk
             if (i + j < size) {
                 // Converte o byte bruto para 'unsigned char' para evitar valores negativos indesejados
-                unsigned char byte_val = static_cast<unsigned char>(data[i + j]);
+                unsigned char byte = static_cast<unsigned char>(data[i + j]);
                 // Imprime o valor do byte em hexadecimal com 2 dígitos, preenchendo com zero à esquerda
-                std::cout << std::setw(2) << std::setfill('0') << static_cast<int>(byte_val) << " ";
+                std::cout << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
             } 
             else{
                 // Se o arquivo acabou e a última linha ficou incompleta, imprime espaços em branco para alinhar
@@ -78,12 +82,37 @@ int main(){
     // Aloca o buffer dinâmico na RAM com o tamanho exato do chunk definido
     std::vector<char> buffer(CHUNK_SIZE);
     // lê um bloco completo OU garante que o último pedaço parcial do arquivo seja processado
-    int i = 0;
+    int i = 0; // contador de chuncks
+    // Lista que vai armazenar vários vetores dentro dela
+    std::vector<std::vector<char>> lista_de_vetores;
+    char FLAG[8] = "INIT";
     while (file.read(buffer.data(), CHUNK_SIZE) || file.gcount() > 0){
         // Obtém a quantidade exata de bytes que foram efetivamente lidos nesta iteração
         std::streamsize CHUNK = file.gcount();
+
+        // parte capaz de trabalhar com chuncks partidas
+        for (int j = 0; j < 2; j++){
+            if (std::strcmp(FLAG, "INIT") == 0){
+                for (int k = 0; k < CHUNK; k++){
+                    if(){}
+                }
+            }
+        }
+        
+        
         // Passa o endereço dos dados do buffer e o tamanho real para a função de tratamento
         chunck_loader(buffer.data(), CHUNK, i);
+
+
+        // Novo vetor temporário para o pedaço atual
+        std::vector<char> novo_vetor_parcial;
+        // Processa ou preenche esse vetor byte a byte conforme sua lógica
+        for (std::streamsize j = 0; j < CHUNK; ++j){
+            char byte_val = buffer[j];
+            novo_vetor_parcial.push_back(byte_val);
+        }
+        // Insere o vetor menor recém-criado dentro da lista maior
+        lista_de_vetores.push_back(novo_vetor_parcial);
         i++;
     }
     // Verifica se ocorreu algum erro físico ou falha crítica de hardware/I/O no disco
