@@ -57,10 +57,18 @@ std::string get_cp_string(const std::vector<ConstantPoolEntry>& cp, uint16_t ind
 }
 
 int main() {
+    std::cout << "Digite o caminho do arquivo .class (ex: CLASSE.class): ";
+
+    //otmização de parâmetros
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(NULL);
 
-    const std::string Class_Route = "JAVA/TA1.class";
+    // const std::string Class_Route = "JAVA/TA1.class";
+
+    std::string Class_Route;
+    // Usamos std::getline para aceitar caminhos que possam conter espaços em branco
+    std::getline(std::cin, Class_Route);
+
     std::ifstream file(Class_Route, std::ios::binary);
     
     if (!file.is_open()) {
@@ -237,7 +245,7 @@ int main() {
         std::string method_name = get_cp_string(constant_pool, m_name_index);
         std::string method_desc = get_cp_string(constant_pool, m_desc_index);
         
-        std::cout << "\nMétodo: " << method_name << method_desc << "\n";
+        std::cout << "\nMetodo: " << method_name << method_desc << "\n";
 
         for (int j = 0; j < m_attributes_count; ++j) {
             uint16_t attr_name_index = read_u2(file);
