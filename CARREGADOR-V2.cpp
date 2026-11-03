@@ -74,7 +74,7 @@ int main() {
 
     // 1. Magic Number
     uint32_t magic = read_u4(file);
-    std::cout << "Magic Number: 0x" << std::hex << std::setw(8) << std::setfill('0') << magic << std::dec << "\n";
+    std::cout << "Magic Number: 0x" << std::hex << std::setw(8) << std::setfill('\0') << magic << std::dec << "\n";
     if (magic != 0xCAFEBABE) {
         std::cerr << "Erro Critico: O arquivo nao possui o Magic Number valido da JVM (0xCAFEBABE)!\n";
         return 1;
@@ -260,7 +260,7 @@ int main() {
                     auto it = bytecode_map.find(opcode);
                     std::string mnemonic = (it != bytecode_map.end()) ? it->second : "desconhecido";
                     
-                    std::cout << "     " << std::setw(4) << std::setfill('0') << pc << ": " << std::left << std::setw(15) << mnemonic;
+                    std::cout << "     " << std::setw(4) << std::setfill('\0') << pc << ": " << std::left << std::setw(15) << mnemonic;
 
                     // Leitura de argumentos baseados no opcode para exibir a resolução do Constant Pool
                     if (opcode == 0x10 || opcode == 0x15 || opcode == 0x16 || opcode == 0x17 || opcode == 0x18 || opcode == 0x19 || 
