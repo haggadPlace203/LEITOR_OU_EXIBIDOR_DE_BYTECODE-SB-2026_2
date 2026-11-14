@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <stdint.h>
 
+#include <iostream> /*!!!!!!!!!!!!!!!!!!!!!!!!*/
+
 /*========Funções otimizadas para execução do bytecode JVM ===========*/
 
 // Byte 0x00: Num faz nada
@@ -25,7 +27,7 @@ inline void aconst_null(Context& ctx){
 }
 // Byte 0x02: Empilha -1 no topo da pilha
 template <typename Context>
-inline void aconst_null(Context& ctx){
+inline void iconst_m1(Context& ctx){
     ctx.push(INT32_C(-1));
 }
 
@@ -121,7 +123,7 @@ inline void op_03(Context& ctx) {
 
 // Byte 0x04: Desempilha o topo e salva na Variável Local [0]
 template <typename Context>
-inline void op_04_store0(Context& ctx) {
+inline void LOCAL(Context& ctx) {
     if (!ctx.empty()) {
         ctx.locais[0] = ctx.top();
         ctx.pop();
@@ -137,7 +139,8 @@ inline void op_05_load0(Context& ctx) {
 // Byte 0xFF: NÃO FAZ WBGObnglrbLN6544684&*%$$$ SINBORAUM
 template <typename Context>
 inline void TMP(Context& ctx){
-    ctx.locais[0] = ctx.top();
+    // Imprime o valor do topo da pilha na tela
+    std::cout << "Topo da pilha: " << std::hex << ctx.top() << std::dec << std::endl;
     ctx.pop();
 }
 
@@ -170,7 +173,7 @@ inline const std::unordered_map<uint8_t, void (*)(Context&)>& get_instruction() 
 
 
 
-
+        map[0xFE] = LOCAL<Context>;
         map[0xFF] = TMP<Context>;
 
         return map;
