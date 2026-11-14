@@ -1,0 +1,95 @@
+Classfile /D:/Downloads/LEITOR_EXIBIDOR_BYTECODE/JAVA/TA1.class
+  Last modified 15/09/2026; size 648 bytes
+  MD5 checksum 579597d1f50dd47cf628cd956cacc9de
+  Compiled from "TA1.java"
+public class TA1
+  minor version: 0
+  major version: 52
+  flags: ACC_PUBLIC, ACC_SUPER
+Constant pool:
+   #1 = Methodref          #11.#20
+   #2 = Fieldref           #21.#22
+   #3 = Class              #23
+   #4 = Methodref          #3.#20
+   #5 = String             #24
+   #6 = Methodref          #3.#25
+   #7 = Methodref          #3.#26
+   #8 = Methodref          #3.#27
+   #9 = Methodref          #28.#29
+  #10 = Class              #30
+  #11 = Class              #31
+  #12 = Utf8               <init>
+  #13 = Utf8               ()V
+  #14 = Utf8               Code
+  #15 = Utf8               LineNumberTable
+  #16 = Utf8               main
+  #17 = Utf8               ([Ljava/lang/String;)V
+  #18 = Utf8               SourceFile
+  #19 = Utf8               TA1.java
+  #20 = NameAndType        #12:#13
+  #21 = Class              #32
+  #22 = NameAndType        #33:#34
+  #23 = Utf8               java/lang/StringBuilder
+  #24 = Utf8               O resultado da soma eh:
+  #25 = NameAndType        #35:#36
+  #26 = NameAndType        #35:#37
+  #27 = NameAndType        #38:#39
+  #28 = Class              #40
+  #29 = NameAndType        #41:#42
+  #30 = Utf8               TA1
+  #31 = Utf8               java/lang/Object
+  #32 = Utf8               java/lang/System
+  #33 = Utf8               out
+  #34 = Utf8               Ljava/io/PrintStream;
+  #35 = Utf8               append
+  #36 = Utf8               (Ljava/lang/String;)Ljava/lang/StringBuilder;
+  #37 = Utf8               (I)Ljava/lang/StringBuilder;
+  #38 = Utf8               toString
+  #39 = Utf8               ()Ljava/lang/String;
+  #40 = Utf8               java/io/PrintStream
+  #41 = Utf8               println
+  #42 = Utf8               (Ljava/lang/String;)V
+{
+  public TA1();
+    descriptor: ()V
+    flags: ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: invokespecial #1
+         4: return
+      LineNumberTable:
+        line 1: 0
+
+  public static void main(java.lang.String[]);
+    descriptor: ([Ljava/lang/String;)V
+    flags: ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=3, locals=4, args_size=1
+         0: bipush        15
+         2: istore_1
+         3: iconst_5
+         4: istore_2
+         5: iload_1
+         6: iload_2
+         7: iadd
+         8: istore_3
+         9: getstatic     #2
+        12: new           #3
+        15: dup
+        16: invokespecial #4
+        19: ldc           #5
+        21: invokevirtual #6
+        24: iload_3
+        25: invokevirtual #7
+        28: invokevirtual #8
+        31: invokevirtual #9
+        34: return
+      LineNumberTable:
+        line 3: 0
+        line 4: 3
+        line 5: 5
+        line 7: 9
+        line 8: 34
+}
+SourceFile: "TA1.java"
