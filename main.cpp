@@ -8,7 +8,7 @@
 
 int main() {
     // 1. Atributo 'code' extraído de um método da classe Java
-    std::vector<uint8_t> atributo_code_metodo = { 0x01, 0x02, 0x03, 0x04, 0x01, 0x05, 0x03 };
+    std::vector<uint8_t> atributo_code_metodo = { 0x00, 0x01, 0x02, 0xFF, 0xFF, 0xFF };
 
     // 2. Criação do Frame de Método (VMContext) passando os limites N e o atributo 'code'
     VMContext frame_metodo(10, 5, 5, atributo_code_metodo);
