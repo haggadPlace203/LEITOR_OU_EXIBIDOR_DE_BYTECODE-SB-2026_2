@@ -1,3 +1,10 @@
+/*==================================================*/
+/*  Informações sobre o desenvolvedor & assinatura  */
+/*   Carlos Luan Silva Pereira - Eng. Mecatrônica   */
+/*       Estudante da Universidade de Brasília      */
+/*           Brasília - DF - 14/11/2026             */
+/*==================================================*/
+
 #ifndef BYTECODE_H
 #define BYTECODE_H
 
@@ -53,40 +60,40 @@ template <typename Context>
 inline void iconst_5(Context& ctx){
     ctx.push(INT32_C(5));
 }
-// Byte 0x09: Empilha 0L no topo da pilha (64 bits -> 2 slots)
+// Byte 0x09: Empilha long 0L no topo da pilha (64 bits -> 2 slots)
 template <typename Context>
 inline void lconst_0(Context& ctx){
     ctx.push(INT32_C(0));
     ctx.push(INT32_C(0));
 }
-// Byte 0x0A: Empilha 1L no topo da pilha (64 bits -> 2 slots)
+// Byte 0x0A: Empilha long 1L no topo da pilha (64 bits -> 2 slots)
 template <typename Context>
 inline void lconst_1(Context& ctx){
     ctx.push(INT32_C(0));
     ctx.push(INT32_C(1));
 }
-// Byte 0x0B: Empilha 0.0f no topo da pilha (IEEE 754: 0x00000000)
+// Byte 0x0B: Empilha float 0.0f no topo da pilha (IEEE 754: 0x00000000)
 template <typename Context>
 inline void fconst_0(Context& ctx){
     ctx.push(INT32_C(0x00000000));
 }
-// Byte 0x0C: Empilha 1.0f no topo da pilha (IEEE 754: 0x3F800000)
+// Byte 0x0C: Empilha float 1.0f no topo da pilha (IEEE 754: 0x3F800000)
 template <typename Context>
 inline void fconst_1(Context& ctx){
     ctx.push(INT32_C(0x3F800000));
 }
-// Byte 0x0D: Empilha 2.0f no topo da pilha (IEEE 754: 0x40000000)
+// Byte 0x0D: Empilha float 2.0f no topo da pilha (IEEE 754: 0x40000000)
 template <typename Context>
 inline void fconst_2(Context& ctx){
     ctx.push(INT32_C(0x40000000));
 }
-// Byte 0x0E: Empilha 0.0 no topo da pilha (IEEE 754: 0x0000000000000000)
+// Byte 0x0E: Empilha double 0.0 no topo da pilha (IEEE 754: 0x0000000000000000)
 template <typename Context>
 inline void dconst_0(Context& ctx){
     ctx.push(INT32_C(0x00000000));
     ctx.push(INT32_C(0x00000000));
 }
-// Byte 0x0F: Empilha 1.0 no topo da pilha (IEEE 754: 0x3FF0000000000000)
+// Byte 0x0F: Empilha double 1.0 no topo da pilha (IEEE 754: 0x3FF0000000000000)
 template <typename Context>
 inline void dconst_1(Context& ctx){
     ctx.push(INT32_C(0x3FF00000));
@@ -96,7 +103,7 @@ inline void dconst_1(Context& ctx){
 
 
 
-
+/*=========EXEMPLOS A SEREM APAGADOS DEPOIS =========*/
 
 // Byte 0x03: Remove os dois valores do topo, soma em 32 bits e empilha o resultado
 template <typename Context>
@@ -127,6 +134,14 @@ inline void op_05_load0(Context& ctx) {
     ctx.push(ctx.locais[0]);
 }
 
+// Byte 0xFF: NÃO FAZ WBGObnglrbLN6544684&*%$$$ SINBORAUM
+template <typename Context>
+inline void TMP(Context& ctx){
+    ctx.locais[0] = ctx.top();
+    ctx.pop();
+}
+
+/*======TABELA HASH FUNÇÕES BYTECODE=====*/
 // Tabela hash parametrizada pelo tipo Context (instanciada no main.cpp)
 template <typename Context>
 inline const std::unordered_map<uint8_t, void (*)(Context&)>& get_instruction() {
@@ -145,6 +160,18 @@ inline const std::unordered_map<uint8_t, void (*)(Context&)>& get_instruction() 
         map[0x06] = iconst_3<Context>;
         map[0x07] = iconst_4<Context>;
         map[0x08] = iconst_5<Context>;
+        map[0x09] = lconst_0<Context>;
+        map[0x0A] = lconst_1<Context>;
+        map[0x0B] = fconst_0<Context>;
+        map[0x0C] = fconst_1<Context>;
+        map[0x0D] = fconst_2<Context>;
+        map[0x0E] = dconst_0<Context>;
+        map[0x0F] = dconst_1<Context>;
+
+
+
+
+        map[0xFF] = TMP<Context>;
 
         return map;
     }();
@@ -165,5 +192,8 @@ inline const std::unordered_map<uint8_t, void (*)(Context&)>& get_instruction() 
 /*   momento em que get_instruction<VMContext>()  */
 /*   e invocado no codigo principal.              */
 /*================================================*/
+
+
+/*!!!Assinado Por CLSP & Cruzeirão Prof. M. Ladeira!!!*/
 
 #endif
