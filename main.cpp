@@ -9,9 +9,10 @@
 int main() {
     // 1. Atributo 'code' extraído de um método da classe Java
     std::vector<uint8_t> atributo_code_metodo = { 
-        0x06, 0x07, 0xFF, 0xFE, 
-        0x06, 0x07, 0xFF, 0xFE, 
-        0x06, 0x07, 0xFF, 0xFE
+        0x06, 0x10, 0xFE, 0xFF,
+        0x06, 0x10, 0x55, 0xFF,
+        0x11, 0x55, 0xAA, 0xFF,
+        0x06, 0x10, 0x80, 0xFF
     };
 
     // 2. Criação do Frame de Método (VMContext) passando os limites N e o atributo 'code'
@@ -23,8 +24,11 @@ int main() {
 
     // 4. Loop de execução guiado pelo PC do frame
     while (frame_metodo.pc < frame_metodo.code.size()) {
+
+        std::cout << "PCI = " << frame_metodo.pc << std::endl;
         uint8_t byte_atual = frame_metodo.code[frame_metodo.pc];
         frame_metodo.pc++;
+        std::cout << "PCF = " << frame_metodo.pc << std::endl;
 
         auto it = bytecode_map.find(byte_atual);
         if (it != bytecode_map.end()) {
