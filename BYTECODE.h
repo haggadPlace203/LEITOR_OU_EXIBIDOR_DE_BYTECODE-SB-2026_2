@@ -10,6 +10,9 @@
 
 #include <unordered_map>
 #include <stdint.h>
+#include <cstring>
+#include <cmath>
+
 
 #include <iostream> /*!!!!!!!!!!!!!!!!!!!!!!!!*/
 
@@ -123,21 +126,21 @@ template <typename Context>
 inline void ldc(Context& ctx){
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x13: 
 template <typename Context>
 inline void ldc_w(Context& ctx){
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x14: 
 template <typename Context>
 inline void ldc2_w(Context& ctx){
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x15: pega Variável Local e coloca na pilha
 template <typename Context>
@@ -223,22 +226,22 @@ inline void lload_3(Context& ctx) {
 // Byte 0x22: pega Variável Local (float) e coloca na pilha
 template <typename Context>
 inline void fload_0(Context& ctx) {
-    ctx.push(ctx.locais);
+    ctx.push(ctx.locais[0]);
 }
 // Byte 0x23: pega Variável Local (float) e coloca na pilha
 template <typename Context>
 inline void fload_1(Context& ctx) {
-    ctx.push(ctx.locais);
+    ctx.push(ctx.locais[1]);
 }
 // Byte 0x24: pega Variável Local (float) e coloca na pilha
 template <typename Context>
 inline void fload_2(Context& ctx) {
-    ctx.push(ctx.locais);
+    ctx.push(ctx.locais[2]);
 }
 // Byte 0x25: pega Variável Local (float) e coloca na pilha
 template <typename Context>
 inline void fload_3(Context& ctx) {
-    ctx.push(ctx.locais);
+    ctx.push(ctx.locais[3]);
 }
 // Byte 0x26: pega Variável Local (double nos slots 0 e 1) e coloca na pilha
 template <typename Context>
@@ -287,42 +290,42 @@ inline void aload_3(Context& ctx) {
 // Byte 0x2E: 
 template <typename Context>
 inline void iaload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x2F: 
 template <typename Context>
 inline void laload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x30: 
 template <typename Context>
 inline void faload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x31: 
 template <typename Context>
 inline void daload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x32: 
 template <typename Context>
 inline void aaload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x33: 
 template <typename Context>
 inline void baload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x34: 
 template <typename Context>
 inline void caload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x35: 
 template <typename Context>
 inline void saload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << frame_metodo.pc << std::endl;
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
 }
 // Byte 0x36: desempilha int e guarda na Variável Local[b1]
 template <typename Context>
@@ -1145,11 +1148,14 @@ inline void lxor(Context& ctx) {
 // Byte 0x84: iinc - Incrementa uma variável local do tipo int por uma constante imediata
 template <typename Context>
 inline void iinc(Context& ctx) {
-    /*uint8_t index = ctx.read_bytecode();
-    int8_t constant = (int8_t)ctx.read_bytecode();
-    int32_t val = ctx.get_local_int(index);
-    ctx.set_local_int(index, val + constant);*/
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+    // 1. Lê o índice sem sinal (0 a 255) e avança o PC
+    uint8_t index = ctx.code[ctx.pc];ctx.pc++;
+    // 2. Lê a constante com sinal (-128 a 127) e avança o PC
+    int8_t b1 = static_cast<int8_t>(ctx.code[ctx.pc]);ctx.pc++;
+    // 3. Extensão de sinal de 8 bits para 32 bits
+    int32_t constante = static_cast<int32_t>(b1);
+    // 4. Soma diretamente na variável local apontada por 'index' (sem tocar na pilha!)
+    ctx.locais[index] += constante;
 }
 // Byte 0x85: i2l - Converte int (1 slot) para long (2 slots)
 template <typename Context>
@@ -1435,8 +1441,8 @@ inline void ifeq(Context& ctx) {
         int32_t val = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1; // Posição do opcode ifeq
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++; // ou ctx.code[ctx.pc++]
-        int16_t low = ctx.read_bytecode();  ctx.pc++; // ou ctx.code[ctx.pc++]
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++; // ou ctx.code[ctx.pc++]
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++; // ou ctx.code[ctx.pc++]
         int16_t offset = (high << 8) | low;
 
         if (val == 0) {
@@ -1451,8 +1457,8 @@ inline void ifne(Context& ctx) {
         int32_t val = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val != 0) {
@@ -1467,8 +1473,8 @@ inline void iflt(Context& ctx) {
         int32_t val = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val < 0) {
@@ -1483,8 +1489,8 @@ inline void ifge(Context& ctx) {
         int32_t val = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val >= 0) {
@@ -1499,8 +1505,8 @@ inline void ifgt(Context& ctx) {
         int32_t val = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val > 0) {
@@ -1515,8 +1521,8 @@ inline void ifle(Context& ctx) {
         int32_t val = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val <= 0) {
@@ -1532,8 +1538,8 @@ inline void if_icmpeq(Context& ctx) {
         int32_t val2 = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val2 == val1) {
@@ -1549,8 +1555,8 @@ inline void if_icmpne(Context& ctx) {
         int32_t val2 = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val2 != val1) {
@@ -1566,8 +1572,8 @@ inline void if_icmplt(Context& ctx) {
         int32_t val2 = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val2 < val1) {
@@ -1583,8 +1589,8 @@ inline void if_icmpge(Context& ctx) {
         int32_t val2 = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val2 >= val1) {
@@ -1600,8 +1606,8 @@ inline void if_icmpgt(Context& ctx) {
         int32_t val2 = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val2 > val1) {
@@ -1617,8 +1623,8 @@ inline void if_icmple(Context& ctx) {
         int32_t val2 = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val2 <= val1) {
@@ -1630,12 +1636,12 @@ inline void if_icmple(Context& ctx) {
 template <typename Context>
 inline void if_acmpeq(Context& ctx) {
     if (ctx.size() >= 2) {
-        void* val1 = ctx.top_reference(); ctx.pop();
-        void* val2 = ctx.top_reference(); ctx.pop();
+        uint32_t val1 = ctx.top(); ctx.pop();
+        uint32_t val2 = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val2 == val1) {
@@ -1647,12 +1653,12 @@ inline void if_acmpeq(Context& ctx) {
 template <typename Context>
 inline void if_acmpne(Context& ctx) {
     if (ctx.size() >= 2) {
-        void* val1 = ctx.top_reference(); ctx.pop();
-        void* val2 = ctx.top_reference(); ctx.pop();
+        uint32_t val1 = ctx.top(); ctx.pop();
+        uint32_t val2 = ctx.top(); ctx.pop();
         int32_t branch_pc = ctx.pc - 1;
         
-        int16_t high = ctx.read_bytecode(); ctx.pc++;
-        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+        int16_t low = ctx.code[ctx.pc];  ctx.pc++;
         int16_t offset = (high << 8) | low;
 
         if (val2 != val1) {
@@ -1660,7 +1666,17 @@ inline void if_acmpne(Context& ctx) {
         }
     }
 }
+// Byte 0xA7: goto - Salto incondicional de 16 bits
+template <typename Context>
+inline void goto_JVM(Context& ctx) {
+    int32_t branch_pc = ctx.pc - 1; // Posição do opcode goto
+    
+    int16_t high = ctx.code[ctx.pc]; ctx.pc++;
+    int16_t low = ctx.code[ctx.pc];  ctx.pc++;
+    int16_t offset = (high << 8) | low;
 
+    ctx.pc = branch_pc + offset;
+}
 
 
 
@@ -1899,6 +1915,8 @@ inline const std::unordered_map<uint8_t, void (*)(Context&)>& get_instruction() 
         map[0xA4] = if_icmple<Context>;
         map[0xA5] = if_acmpeq<Context>;
         map[0xA6] = if_acmpne<Context>;
+
+        map[0xA7] = goto_JVM<Context>;
 
 
 
