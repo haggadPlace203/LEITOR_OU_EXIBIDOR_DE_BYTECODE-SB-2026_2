@@ -34,10 +34,11 @@ struct VMContext {
         }
     }
 
-    void pop() {
+    int pop() {
         if (topo_pilha >= 0) {
             topo_pilha--;
         }
+        return 0; // Evita comportamento indefinido (warning do compilador) caso a pilha esteja vazia
     }
 
     int32_t top() const {
