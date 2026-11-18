@@ -593,10 +593,1073 @@ inline void swap(Context& ctx) {
     ctx.push(v1);
     ctx.push(v2);
 }
+// Byte 0x60: iadd - Soma dois int (32-bit, consome 2 slots de 1 slot cada)
+template <typename Context>
+inline void iadd(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        ctx.push(val2 + val1);
+    }
+}
+// Byte 0x61: ladd - Soma dois long (64-bit, consome 4 slots na pilha de 32 bits: 2 para val1, 2 para val2)
+template <typename Context>
+inline void ladd(Context& ctx) {
+    if (ctx.size() >= 4) {
+        // Desempilha val1 (64-bit dividido em high e low)
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        int64_t val1 = ((int64_t)v1_high << 32) | v1_low;
 
+        // Desempilha val2 (64-bit dividido em high e low)
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
 
+        int64_t result = val2 + val1;
 
+        // Empilha o resultado de volta (ocupando 2 slots de 32 bits)
+        ctx.push((uint32_t)(result >> 32));         // high word
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));  // low word
+    }
+}
+// Byte 0x62: fadd - Soma dois float (32-bit, 1 slot cada)
+template <typename Context>
+inline void fadd(Context& ctx) {
+    if (ctx.size() >= 2) {
+        float val1, val2;
+        // Assume conversão segura do slot de 32 bits para float
+        uint32_t raw1 = ctx.top(); ctx.pop();
+        uint32_t raw2 = ctx.top(); ctx.pop();
+        std::memcpy(&val1, &raw1, sizeof(float));
+        std::memcpy(&val2, &raw2, sizeof(float));
+        
+        float res = val2 + val1;
+        uint32_t raw_res;
+        std::memcpy(&raw_res, &res, sizeof(uint32_t));
+        ctx.push(raw_res);
+    }
+}
+// Byte 0x63: dadd - Soma dois double (64-bit, consome 4 slots na pilha de 32 bits)
+template <typename Context>
+inline void dadd(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        uint64_t raw_v1 = ((uint64_t)v1_high << 32) | v1_low;
+        double val1;
+        std::memcpy(&val1, &raw_v1, sizeof(double));
 
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        uint64_t raw_v2 = ((uint64_t)v2_high << 32) | v2_low;
+        double val2;
+        std::memcpy(&val2, &raw_v2, sizeof(double));
+
+        double result = val2 + val1;
+        uint64_t raw_res;
+        std::memcpy(&raw_res, &result, sizeof(uint64_t));
+
+        ctx.push((uint32_t)(raw_res >> 32));
+        ctx.push((uint32_t)(raw_res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x64: isub - Subtrai dois int (val2 - val1)
+template <typename Context>
+inline void isub(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        ctx.push(val2 - val1);
+    }
+}
+// Byte 0x65: lsub - Subtrai dois long (64-bit, consome 4 slots)
+template <typename Context>
+inline void lsub(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        int64_t val1 = ((int64_t)v1_high << 32) | v1_low;
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
+
+        int64_t result = val2 - val1;
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x66: fsub - Subtrai dois float (val2 - val1)
+template <typename Context>
+inline void fsub(Context& ctx) {
+    if (ctx.size() >= 2) {
+        float val1, val2;
+        uint32_t raw1 = ctx.top(); ctx.pop();
+        uint32_t raw2 = ctx.top(); ctx.pop();
+        std::memcpy(&val1, &raw1, sizeof(float));
+        std::memcpy(&val2, &raw2, sizeof(float));
+        
+        float res = val2 - val1;
+        uint32_t raw_res;
+        std::memcpy(&raw_res, &res, sizeof(uint32_t));
+        ctx.push(raw_res);
+    }
+}
+// Byte 0x67: dsub - Subtrai dois double (64-bit, val2 - val1)
+template <typename Context>
+inline void dsub(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        uint64_t raw_v1 = ((uint64_t)v1_high << 32) | v1_low;
+        double val1; std::memcpy(&val1, &raw_v1, sizeof(double));
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        uint64_t raw_v2 = ((uint64_t)v2_high << 32) | v2_low;
+        double val2; std::memcpy(&val2, &raw_v2, sizeof(double));
+
+        double result = val2 - val1;
+        uint64_t raw_res; std::memcpy(&raw_res, &result, sizeof(uint64_t));
+
+        ctx.push((uint32_t)(raw_res >> 32));
+        ctx.push((uint32_t)(raw_res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x68: imul - Multiplica dois int
+template <typename Context>
+inline void imul(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        ctx.push(val2 * val1);
+    }
+}
+// Byte 0x69: lmul - Multiplica dois long (64-bit, consome 4 slots)
+template <typename Context>
+inline void lmul(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        int64_t val1 = ((int64_t)v1_high << 32) | v1_low;
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
+
+        int64_t result = val2 * val1;
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x6A: fmul - Multiplica dois float
+template <typename Context>
+inline void fmul(Context& ctx) {
+    if (ctx.size() >= 2) {
+        float val1, val2;
+        uint32_t raw1 = ctx.top(); ctx.pop();
+        uint32_t raw2 = ctx.top(); ctx.pop();
+        std::memcpy(&val1, &raw1, sizeof(float));
+        std::memcpy(&val2, &raw2, sizeof(float));
+        
+        float res = val2 * val1;
+        uint32_t raw_res; std::memcpy(&raw_res, &res, sizeof(uint32_t));
+        ctx.push(raw_res);
+    }
+}
+// Byte 0x6B: dmul - Multiplica dois double (64-bit, consome 4 slots)
+template <typename Context>
+inline void dmul(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        uint64_t raw_v1 = ((uint64_t)v1_high << 32) | v1_low;
+        double val1; std::memcpy(&val1, &raw_v1, sizeof(double));
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        uint64_t raw_v2 = ((uint64_t)v2_high << 32) | v2_low;
+        double val2; std::memcpy(&val2, &raw_v2, sizeof(double));
+
+        double result = val2 * val1;
+        uint64_t raw_res; std::memcpy(&raw_res, &result, sizeof(uint64_t));
+
+        ctx.push((uint32_t)(raw_res >> 32));
+        ctx.push((uint32_t)(raw_res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x6C: idiv - Divide dois int (val2 / val1)
+template <typename Context>
+inline void idiv(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        if (val1 == 0) {
+            // Lança ArithmeticException na JVM
+            std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+        }
+        ctx.push(val2 / val1);
+    }
+}
+// Byte 0x6D: ldiv - Divide dois long (64-bit, consome 4 slots)
+template <typename Context>
+inline void ldiv_JVM(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        int64_t val1 = ((int64_t)v1_high << 32) | v1_low;
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
+
+        if (val1 == 0) {
+            // Lança ArithmeticException
+            std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+        }
+
+        int64_t result = val2 / val1;
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x6E: fdiv - Divide dois float (val2 / val1)
+template <typename Context>
+inline void fdiv_JVM(Context& ctx) {
+    if (ctx.size() >= 2) {
+        float val1, val2;
+        uint32_t raw1 = ctx.top(); ctx.pop();
+        uint32_t raw2 = ctx.top(); ctx.pop();
+        std::memcpy(&val1, &raw1, sizeof(float));
+        std::memcpy(&val2, &raw2, sizeof(float));
+        
+        float res = val2 / val1;
+        uint32_t raw_res; std::memcpy(&raw_res, &res, sizeof(uint32_t));
+        ctx.push(raw_res);
+    }
+}
+// Byte 0x6F: ddiv - Divide dois double (64-bit, consome 4 slots)
+template <typename Context>
+inline void ddiv(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        uint64_t raw_v1 = ((uint64_t)v1_high << 32) | v1_low;
+        double val1; std::memcpy(&val1, &raw_v1, sizeof(double));
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        uint64_t raw_v2 = ((uint64_t)v2_high << 32) | v2_low;
+        double val2; std::memcpy(&val2, &raw_v2, sizeof(double));
+
+        double result = val2 / val1;
+        uint64_t raw_res; std::memcpy(&raw_res, &result, sizeof(uint64_t));
+
+        ctx.push((uint32_t)(raw_res >> 32));
+        ctx.push((uint32_t)(raw_res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x70: irem - Resto da divisão de dois int (val2 % val1)
+template <typename Context>
+inline void irem(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        if (val1 == 0) {
+            // Lança ArithmeticException
+            std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+        }
+        ctx.push(val2 % val1);
+    }
+}
+// Byte 0x71: lrem - Resto da divisão de dois long (64-bit, consome 4 slots)
+template <typename Context>
+inline void lrem(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        int64_t val1 = ((int64_t)v1_high << 32) | v1_low;
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
+
+        if (val1 == 0) {
+            // Lança ArithmeticException
+            std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+        }
+
+        int64_t result = val2 % val1;
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x72: frem - Resto da divisão de dois float
+template <typename Context>
+inline void frem(Context& ctx) {
+    if (ctx.size() >= 2) {
+        float val1, val2;
+        uint32_t raw1 = ctx.top(); ctx.pop();
+        uint32_t raw2 = ctx.top(); ctx.pop();
+        std::memcpy(&val1, &raw1, sizeof(float));
+        std::memcpy(&val2, &raw2, sizeof(float));
+        
+        float res = std::fmod(val2, val1);
+        uint32_t raw_res; std::memcpy(&raw_res, &res, sizeof(uint32_t));
+        ctx.push(raw_res);
+    }
+}
+// Byte 0x73: drem - Resto da divisão de dois double (64-bit, consome 4 slots)
+template <typename Context>
+inline void drem(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        uint64_t raw_v1 = ((uint64_t)v1_high << 32) | v1_low;
+        double val1; std::memcpy(&val1, &raw_v1, sizeof(double));
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        uint64_t raw_v2 = ((uint64_t)v2_high << 32) | v2_low;
+        double val2; std::memcpy(&val2, &raw_v2, sizeof(double));
+
+        double result = std::fmod(val2, val1);
+        uint64_t raw_res; std::memcpy(&raw_res, &result, sizeof(uint64_t));
+
+        ctx.push((uint32_t)(raw_res >> 32));
+        ctx.push((uint32_t)(raw_res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x74: ineg - Inverte o sinal de um int (32-bit, 1 slot)
+template <typename Context>
+inline void ineg(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = ctx.top(); ctx.pop();
+        ctx.push(-val);
+    }
+}
+// Byte 0x75: lneg - Inverte o sinal de um long (64-bit, consome 2 slots)
+template <typename Context>
+inline void lneg(Context& ctx) {
+    if (ctx.size() >= 2) {
+        uint32_t low = ctx.top(); ctx.pop();
+        uint32_t high = ctx.top(); ctx.pop();
+        int64_t val = ((int64_t)high << 32) | low;
+        
+        int64_t result = -val;
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x76: fneg - Inverte o sinal de um float (32-bit, 1 slot)
+template <typename Context>
+inline void fneg(Context& ctx) {
+    if (ctx.size() >= 1) {
+        float val;
+        uint32_t raw = ctx.top(); ctx.pop();
+        std::memcpy(&val, &raw, sizeof(float));
+        
+        float res = -val;
+        uint32_t raw_res; std::memcpy(&raw_res, &res, sizeof(uint32_t));
+        ctx.push(raw_res);
+    }
+}
+// Byte 0x77: dneg - Inverte o sinal de um double (64-bit, consome 2 slots)
+template <typename Context>
+inline void dneg(Context& ctx) {
+    if (ctx.size() >= 2) {
+        uint32_t low = ctx.top(); ctx.pop();
+        uint32_t high = ctx.top(); ctx.pop();
+        uint64_t raw = ((uint64_t)high << 32) | low;
+        double val; std::memcpy(&val, &raw, sizeof(double));
+
+        double res = -val;
+        uint64_t raw_res; std::memcpy(&raw_res, &res, sizeof(uint64_t));
+
+        ctx.push((uint32_t)(raw_res >> 32));
+        ctx.push((uint32_t)(raw_res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x78: ishl - Shift à esquerda de int (value2 << value1)
+template <typename Context>
+inline void ishl(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop(); // distância (32-bit)
+        int32_t val2 = ctx.top(); ctx.pop(); // valor
+        ctx.push(val2 << (val1 & 0x1F));
+    }
+}
+// Byte 0x79: lshl - Shift à esquerda de long (consome 3 slots: long embaixox2, int topo)
+template <typename Context>
+inline void lshl(Context& ctx) {
+    if (ctx.size() >= 3) {
+        int32_t val1 = ctx.top(); ctx.pop(); // distância (int)
+        
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low; // valor (long)
+
+        int64_t result = val2 << (val1 & 0x3F);
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x7A: ishr - Shift aritmético à direita de int (value2 >> value1)
+template <typename Context>
+inline void ishr(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        ctx.push(val2 >> (val1 & 0x1F));
+    }
+}
+// Byte 0x7B: lshr - Shift aritmético à direita de long (consome 3 slots)
+template <typename Context>
+inline void lshr(Context& ctx) {
+    if (ctx.size() >= 3) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
+
+        int64_t result = val2 >> (val1 & 0x3F);
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x7C: iushr - Shift lógico/sem sinal à direita de int (unsigned)
+template <typename Context>
+inline void iushr(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        uint32_t val2 = (uint32_t)ctx.top(); ctx.pop();
+        ctx.push((int32_t)(val2 >> (val1 & 0x1F)));
+    }
+}
+// Byte 0x7D: lushr - Shift lógico/sem sinal à direita de long (consome 3 slots)
+template <typename Context>
+inline void lushr(Context& ctx) {
+    if (ctx.size() >= 3) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        uint64_t val2 = ((uint64_t)v2_high << 32) | v2_low;
+
+        uint64_t result = val2 >> (val1 & 0x3F);
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x7E: iand - AND bitwise entre dois int
+template <typename Context>
+inline void iand(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        ctx.push(val2 & val1);
+    }
+}
+// Byte 0x7F: land - AND bitwise entre dois long (64-bit, consome 4 slots)
+template <typename Context>
+inline void land(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        int64_t val1 = ((int64_t)v1_high << 32) | v1_low;
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
+
+        int64_t result = val2 & val1;
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x80: ior - OR inclusivo bitwise entre dois int
+template <typename Context>
+inline void ior(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        ctx.push(val2 | val1);
+    }
+}
+// Byte 0x81: lor - OR inclusivo bitwise entre dois long (64-bit, consome 4 slots)
+template <typename Context>
+inline void lor(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        int64_t val1 = ((int64_t)v1_high << 32) | v1_low;
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
+
+        int64_t result = val2 | val1;
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x82: ixor - XOR (ou exclusivo) bitwise entre dois int
+template <typename Context>
+inline void ixor(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        ctx.push(val2 ^ val1);
+    }
+}
+// Byte 0x83: lxor - XOR bitwise entre dois long (64-bit, consome 4 slots)
+template <typename Context>
+inline void lxor(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        int64_t val1 = ((int64_t)v1_high << 32) | v1_low;
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
+
+        int64_t result = val2 ^ val1;
+
+        ctx.push((uint32_t)(result >> 32));
+        ctx.push((uint32_t)(result & 0xFFFFFFFF));
+    }
+}
+// Byte 0x84: iinc - Incrementa uma variável local do tipo int por uma constante imediata
+template <typename Context>
+inline void iinc(Context& ctx) {
+    /*uint8_t index = ctx.read_bytecode();
+    int8_t constant = (int8_t)ctx.read_bytecode();
+    int32_t val = ctx.get_local_int(index);
+    ctx.set_local_int(index, val + constant);*/
+    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+}
+// Byte 0x85: i2l - Converte int (1 slot) para long (2 slots)
+template <typename Context>
+inline void i2l(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = (int32_t)ctx.top(); ctx.pop();
+        int64_t res = (int64_t)val;
+        ctx.push((uint32_t)(res >> 32));
+        ctx.push((uint32_t)(res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x86: i2f - Converte int (1 slot) para float (1 slot)
+template <typename Context>
+inline void i2f(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = (int32_t)ctx.top(); ctx.pop();
+        float res = (float)val;
+        uint32_t raw; std::memcpy(&raw, &res, sizeof(uint32_t));
+        ctx.push(raw);
+    }
+}
+// Byte 0x87: i2d - Converte int (1 slot) para double (2 slots)
+template <typename Context>
+inline void i2d(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = (int32_t)ctx.top(); ctx.pop();
+        double res = (double)val;
+        uint64_t raw; std::memcpy(&raw, &res, sizeof(uint64_t));
+        ctx.push((uint32_t)(raw >> 32));
+        ctx.push((uint32_t)(raw & 0xFFFFFFFF));
+    }
+}
+// Byte 0x88: l2i - Converte long (2 slots) para int (1 slot)
+template <typename Context>
+inline void l2i(Context& ctx) {
+    if (ctx.size() >= 2) {
+        uint32_t low = ctx.top(); ctx.pop();
+        uint32_t high = ctx.top(); ctx.pop();
+        int64_t val = ((int64_t)high << 32) | low;
+        int32_t res = (int32_t)val;
+        ctx.push(res);
+    }
+}
+// Byte 0x89: l2f - Converte long (2 slots) para float (1 slot)
+template <typename Context>
+inline void l2f(Context& ctx) {
+    if (ctx.size() >= 2) {
+        uint32_t low = ctx.top(); ctx.pop();
+        uint32_t high = ctx.top(); ctx.pop();
+        int64_t val = ((int64_t)high << 32) | low;
+        float res = (float)val;
+        uint32_t raw; std::memcpy(&raw, &res, sizeof(uint32_t));
+        ctx.push(raw);
+    }
+}
+// Byte 0x8A: l2d - Converte long (2 slots) para double (2 slots)
+template <typename Context>
+inline void l2d(Context& ctx) {
+    if (ctx.size() >= 2) {
+        uint32_t low = ctx.top(); ctx.pop();
+        uint32_t high = ctx.top(); ctx.pop();
+        int64_t val = ((int64_t)high << 32) | low;
+        double res = (double)val;
+        uint64_t raw; std::memcpy(&raw, &res, sizeof(uint64_t));
+        ctx.push((uint32_t)(raw >> 32));
+        ctx.push((uint32_t)(raw & 0xFFFFFFFF));
+    }
+}
+// Byte 0x8B: f2i - Converte float (1 slot) para int (1 slot)
+template <typename Context>
+inline void f2i(Context& ctx) {
+    if (ctx.size() >= 1) {
+        float val;
+        uint32_t raw = ctx.top(); ctx.pop();
+        std::memcpy(&val, &raw, sizeof(float));
+        int32_t res = (int32_t)val;
+        ctx.push(res);
+    }
+}
+// Byte 0x8C: f2l - Converte float (1 slot) para long (2 slots)
+template <typename Context>
+inline void f2l(Context& ctx) {
+    if (ctx.size() >= 1) {
+        float val;
+        uint32_t raw = ctx.top(); ctx.pop();
+        std::memcpy(&val, &raw, sizeof(float));
+        int64_t res = (int64_t)val;
+        ctx.push((uint32_t)(res >> 32));
+        ctx.push((uint32_t)(res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x8D: f2d - Converte float (1 slot) para double (2 slots)
+template <typename Context>
+inline void f2d(Context& ctx) {
+    if (ctx.size() >= 1) {
+        float val;
+        uint32_t raw = ctx.top(); ctx.pop();
+        std::memcpy(&val, &raw, sizeof(float));
+        double res = (double)val;
+        uint64_t raw_res; std::memcpy(&raw_res, &res, sizeof(uint64_t));
+        ctx.push((uint32_t)(raw_res >> 32));
+        ctx.push((uint32_t)(raw_res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x8E: d2i - Converte double (2 slots) para int (1 slot)
+template <typename Context>
+inline void d2i(Context& ctx) {
+    if (ctx.size() >= 2) {
+        uint32_t low = ctx.top(); ctx.pop();
+        uint32_t high = ctx.top(); ctx.pop();
+        uint64_t raw = ((uint64_t)high << 32) | low;
+        double val; std::memcpy(&val, &raw, sizeof(double));
+        int32_t res = (int32_t)val;
+        ctx.push(res);
+    }
+}
+// Byte 0x8F: d2l - Converte double (2 slots) para long (2 slots)
+template <typename Context>
+inline void d2l(Context& ctx) {
+    if (ctx.size() >= 2) {
+        uint32_t low = ctx.top(); ctx.pop();
+        uint32_t high = ctx.top(); ctx.pop();
+        uint64_t raw = ((uint64_t)high << 32) | low;
+        double val; std::memcpy(&val, &raw, sizeof(double));
+        int64_t res = (int64_t)val;
+        ctx.push((uint32_t)(res >> 32));
+        ctx.push((uint32_t)(res & 0xFFFFFFFF));
+    }
+}
+// Byte 0x90: d2f - Converte double (2 slots) para float (1 slot)
+template <typename Context>
+inline void d2f(Context& ctx) {
+    if (ctx.size() >= 2) {
+        uint32_t low = ctx.top(); ctx.pop();
+        uint32_t high = ctx.top(); ctx.pop();
+        uint64_t raw = ((uint64_t)high << 32) | low;
+        double val; std::memcpy(&val, &raw, sizeof(double));
+        float res = (float)val;
+        uint32_t raw_res; std::memcpy(&raw_res, &res, sizeof(uint32_t));
+        ctx.push(raw_res);
+    }
+}
+// Byte 0x91: i2b - Trunca int para byte (com sinal) e empilha como int
+template <typename Context>
+inline void i2b(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = (int32_t)ctx.top(); ctx.pop();
+        int32_t res = (int32_t)(int8_t)val;
+        ctx.push(res);
+    }
+}
+// Byte 0x92: i2c - Converte int para char (sem sinal, 16 bits) e empilha como int
+template <typename Context>
+inline void i2c(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = (int32_t)ctx.top(); ctx.pop();
+        int32_t res = (int32_t)(uint16_t)val;
+        ctx.push(res);
+    }
+}
+// Byte 0x93: i2s - Trunca int para short (com sinal, 16 bits) e empilha como int
+template <typename Context>
+inline void i2s(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = (int32_t)ctx.top(); ctx.pop();
+        int32_t res = (int32_t)(int16_t)val;
+        ctx.push(res);
+    }
+}
+// Byte 0x94: lcmp - Compara dois long (consome 4 slots) e empilha -1, 0 ou 1
+template <typename Context>
+inline void lcmp(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        int64_t val1 = ((int64_t)v1_high << 32) | v1_low;
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        int64_t val2 = ((int64_t)v2_high << 32) | v2_low;
+
+        if (val2 > val1) ctx.push(1);
+        else if (val2 == val1) ctx.push(0);
+        else ctx.push(-1);
+    }
+}
+// Byte 0x95: fcmpl - Compara dois float (consome 2 slots), NaN empilha -1
+template <typename Context>
+inline void fcmpl(Context& ctx) {
+    if (ctx.size() >= 2) {
+        float val1, val2;
+        uint32_t raw1 = ctx.top(); ctx.pop();
+        uint32_t raw2 = ctx.top(); ctx.pop();
+        std::memcpy(&val1, &raw1, sizeof(float));
+        std::memcpy(&val2, &raw2, sizeof(float));
+
+        if (std::isnan(val1) || std::isnan(val2)) {
+            ctx.push(-1);
+        } else if (val2 > val1) {
+            ctx.push(1);
+        } else if (val2 == val1) {
+            ctx.push(0);
+        } else {
+            ctx.push(-1);
+        }
+    }
+}
+// Byte 0x96: fcmpg - Compara dois float (consome 2 slots), NaN empilha 1
+template <typename Context>
+inline void fcmpg(Context& ctx) {
+    if (ctx.size() >= 2) {
+        float val1, val2;
+        uint32_t raw1 = ctx.top(); ctx.pop();
+        uint32_t raw2 = ctx.top(); ctx.pop();
+        std::memcpy(&val1, &raw1, sizeof(float));
+        std::memcpy(&val2, &raw2, sizeof(float));
+
+        if (std::isnan(val1) || std::isnan(val2)) {
+            ctx.push(1);
+        } else if (val2 > val1) {
+            ctx.push(1);
+        } else if (val2 == val1) {
+            ctx.push(0);
+        } else {
+            ctx.push(-1);
+        }
+    }
+}
+// Byte 0x97: dcmpl - Compara dois double (consome 4 slots), NaN empilha -1
+template <typename Context>
+inline void dcmpl(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        uint64_t raw_v1 = ((uint64_t)v1_high << 32) | v1_low;
+        double val1; std::memcpy(&val1, &raw_v1, sizeof(double));
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        uint64_t raw_v2 = ((uint64_t)v2_high << 32) | v2_low;
+        double val2; std::memcpy(&val2, &raw_v2, sizeof(double));
+
+        if (std::isnan(val1) || std::isnan(val2)) {
+            ctx.push(-1);
+        } else if (val2 > val1) {
+            ctx.push(1);
+        } else if (val2 == val1) {
+            ctx.push(0);
+        } else {
+            ctx.push(-1);
+        }
+    }
+}
+// Byte 0x98: dcmpg - Compara dois double (consome 4 slots), NaN empilha 1
+template <typename Context>
+inline void dcmpg(Context& ctx) {
+    if (ctx.size() >= 4) {
+        uint32_t v1_low = ctx.top(); ctx.pop();
+        uint32_t v1_high = ctx.top(); ctx.pop();
+        uint64_t raw_v1 = ((uint64_t)v1_high << 32) | v1_low;
+        double val1; std::memcpy(&val1, &raw_v1, sizeof(double));
+
+        uint32_t v2_low = ctx.top(); ctx.pop();
+        uint32_t v2_high = ctx.top(); ctx.pop();
+        uint64_t raw_v2 = ((uint64_t)v2_high << 32) | v2_low;
+        double val2; std::memcpy(&val2, &raw_v2, sizeof(double));
+
+        if (std::isnan(val1) || std::isnan(val2)) {
+            ctx.push(1);
+        } else if (val2 > val1) {
+            ctx.push(1);
+        } else if (val2 == val1) {
+            ctx.push(0);
+        } else {
+            ctx.push(-1);
+        }
+    }
+}
+// Byte 0x99: ifeq - Desvia se o int no topo for igual a 0 (== 0)
+template <typename Context>
+inline void ifeq(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1; // Posição do opcode ifeq
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++; // ou ctx.code[ctx.pc++]
+        int16_t low = ctx.read_bytecode();  ctx.pc++; // ou ctx.code[ctx.pc++]
+        int16_t offset = (high << 8) | low;
+
+        if (val == 0) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0x9A: ifne - Desvia se o int no topo for diferente de 0 (!= 0)
+template <typename Context>
+inline void ifne(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val != 0) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0x9B: iflt - Desvia se o int no topo for menor que 0 (< 0)
+template <typename Context>
+inline void iflt(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val < 0) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0x9C: ifge - Desvia se o int no topo for maior ou igual a 0 (>= 0)
+template <typename Context>
+inline void ifge(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val >= 0) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0x9D: ifgt - Desvia se o int no topo for maior que 0 (> 0)
+template <typename Context>
+inline void ifgt(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val > 0) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0x9E: ifle - Desvia se o int no topo for menor ou igual a 0 (<= 0)
+template <typename Context>
+inline void ifle(Context& ctx) {
+    if (ctx.size() >= 1) {
+        int32_t val = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val <= 0) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0x9F: if_icmpeq - Desvia se val2 == val1
+template <typename Context>
+inline void if_icmpeq(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val2 == val1) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0xA0: if_icmpne - Desvia se val2 != val1
+template <typename Context>
+inline void if_icmpne(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val2 != val1) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0xA1: if_icmplt - Desvia se val2 < val1
+template <typename Context>
+inline void if_icmplt(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val2 < val1) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0xA2: if_icmpge - Desvia se val2 >= val1
+template <typename Context>
+inline void if_icmpge(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val2 >= val1) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0xA3: if_icmpgt - Desvia se val2 > val1
+template <typename Context>
+inline void if_icmpgt(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val2 > val1) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0xA4: if_icmple - Desvia se val2 <= val1
+template <typename Context>
+inline void if_icmple(Context& ctx) {
+    if (ctx.size() >= 2) {
+        int32_t val1 = ctx.top(); ctx.pop();
+        int32_t val2 = ctx.top(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val2 <= val1) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0xA5: if_acmpeq - Desvia se ref2 == ref1
+template <typename Context>
+inline void if_acmpeq(Context& ctx) {
+    if (ctx.size() >= 2) {
+        void* val1 = ctx.top_reference(); ctx.pop();
+        void* val2 = ctx.top_reference(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val2 == val1) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
+// Byte 0xA6: if_acmpne - Desvia se ref2 != ref1
+template <typename Context>
+inline void if_acmpne(Context& ctx) {
+    if (ctx.size() >= 2) {
+        void* val1 = ctx.top_reference(); ctx.pop();
+        void* val2 = ctx.top_reference(); ctx.pop();
+        int32_t branch_pc = ctx.pc - 1;
+        
+        int16_t high = ctx.read_bytecode(); ctx.pc++;
+        int16_t low = ctx.read_bytecode();  ctx.pc++;
+        int16_t offset = (high << 8) | low;
+
+        if (val2 != val1) {
+            ctx.pc = branch_pc + offset;
+        }
+    }
+}
 
 
 
@@ -755,7 +1818,88 @@ inline const std::unordered_map<uint8_t, void (*)(Context&)>& get_instruction() 
         map[0x5D] = dup2_x1<Context>;
         map[0x5E] = dup2_x2<Context>;
         map[0x5F] = swap<Context>;
-        
+
+        map[0x60] = iadd<Context>;
+        map[0x61] = ladd<Context>;
+        map[0x62] = fadd<Context>;
+        map[0x63] = dadd<Context>;
+
+        map[0x64] = isub<Context>;
+        map[0x65] = lsub<Context>;
+        map[0x66] = fsub<Context>;
+        map[0x67] = dsub<Context>;
+
+        map[0x68] = imul<Context>;
+        map[0x69] = lmul<Context>;
+        map[0x6A] = fmul<Context>;
+        map[0x6B] = dmul<Context>;
+
+        map[0x6C] = idiv<Context>;
+        map[0x6D] = ldiv_JVM<Context>;
+        map[0x6E] = fdiv_JVM<Context>;
+        map[0x6F] = ddiv<Context>;
+
+        map[0x70] = irem<Context>;
+        map[0x71] = lrem<Context>;
+        map[0x72] = frem<Context>;
+        map[0x73] = drem<Context>;
+
+        map[0x74] = ineg<Context>;
+        map[0x75] = lneg<Context>;
+        map[0x76] = fneg<Context>;
+        map[0x77] = dneg<Context>;
+
+        map[0x78] = ishl<Context>;
+        map[0x79] = lshl<Context>;
+        map[0x7A] = ishr<Context>;
+        map[0x7B] = lshr<Context>;
+        map[0x7C] = iushr<Context>;
+        map[0x7D] = lushr<Context>;
+
+        map[0x7E] = iand<Context>;
+        map[0x7F] = land<Context>;
+        map[0x80] = ior<Context>;
+        map[0x81] = lor<Context>;
+        map[0x82] = ixor<Context>;
+        map[0x83] = lxor<Context>;
+
+        map[0x84] = iinc<Context>;
+        map[0x85] = i2l<Context>;
+        map[0x86] = i2f<Context>;
+        map[0x87] = i2d<Context>;
+        map[0x88] = l2i<Context>;
+        map[0x89] = l2f<Context>;
+        map[0x8A] = l2d<Context>;
+        map[0x8B] = f2i<Context>;
+        map[0x8C] = f2l<Context>;
+        map[0x8D] = f2d<Context>;
+        map[0x8E] = d2i<Context>;
+        map[0x8F] = d2l<Context>;
+        map[0x90] = d2f<Context>;
+        map[0x91] = i2b<Context>;
+        map[0x92] = i2c<Context>;
+        map[0x93] = i2s<Context>;
+
+        map[0x94] = lcmp<Context>;
+        map[0x95] = fcmpl<Context>;
+        map[0x96] = fcmpg<Context>;
+        map[0x97] = dcmpl<Context>;
+        map[0x98] = dcmpg<Context>;
+        map[0x99] = ifeq<Context>;
+        map[0x9A] = ifne<Context>;
+        map[0x9B] = iflt<Context>;
+        map[0x9C] = ifge<Context>;
+        map[0x9D] = ifgt<Context>;
+        map[0x9E] = ifle<Context>;
+        map[0x9F] = if_icmpeq<Context>;
+        map[0xA0] = if_icmpne<Context>;
+        map[0xA1] = if_icmplt<Context>;
+        map[0xA2] = if_icmpge<Context>;
+        map[0xA3] = if_icmpgt<Context>;
+        map[0xA4] = if_icmple<Context>;
+        map[0xA5] = if_acmpeq<Context>;
+        map[0xA6] = if_acmpne<Context>;
+
 
 
 
