@@ -26,7 +26,7 @@ struct VMContext {
           locais(max_locals, INT32_C(0)),
           temporarias(max_temps, INT32_C(0)),
           pc(0),
-          code(atributo_code) {}
+          code(atributo_code){}
 
     void push(int32_t val) {
         if (static_cast<size_t>(topo_pilha + 1) < pilha.size()) {
