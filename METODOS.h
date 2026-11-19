@@ -31,14 +31,17 @@ struct VMContext {
     void push(int32_t val) {
         if (static_cast<size_t>(topo_pilha + 1) < pilha.size()) {
             pilha[++topo_pilha] = val;
+        }else{
+            std::cerr << "Erro: Stack overflow em VMContext (pc=" << pc << ").\n";
         }
     }
 
-    int pop() {
+    int32_t pop() {
         if (topo_pilha >= 0) {
-            topo_pilha--;
+            return pilha[topo_pilha--];
         }
-        return 0; // Evita comportamento indefinido (warning do compilador) caso a pilha esteja vazia
+        std::cerr << "Erro: Stack underflow em VMContext (pc=" << pc << ").\n";
+        return INT32_C(0);
     }
 
     int32_t top() const {
@@ -46,11 +49,27 @@ struct VMContext {
     }
 
     size_t size() const {
-        return static_cast<size_t>(topo_pilha + 1);
+        return (topo_pilha >= 0) ? static_cast<size_t>(topo_pilha + 1) : 0;
     }
 
     bool empty() const {
         return topo_pilha < 0;
+    }
+
+    void set_local(size_t idx, int32_t val) {
+        if (idx < locais.size()) {
+            locais[idx] = val;
+        } else {
+            std::cerr << "Aviso: Escrita ignorada em variavel local fora do limite (" << idx << ").\n";
+        }
+    }
+
+    int32_t get_local(size_t idx) const {
+        if (idx < locais.size()) {
+            return locais[idx];
+        }
+        std::cerr << "Erro: Leitura fora dos limites em locais[" << idx << "].\n";
+        return INT32_C(0);
     }
 };
 
