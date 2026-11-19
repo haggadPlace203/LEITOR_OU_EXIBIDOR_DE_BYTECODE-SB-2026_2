@@ -147,145 +147,145 @@ template <typename Context>
 inline void iload(Context& ctx){
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.push(ctx.locais[static_cast<uint32_t>(b1)]);
+    ctx.push(ctx.get_local(static_cast<uint32_t>(b1)));
 }
 // Byte 0x16: pega Variável Local e coloca na pilha
 template <typename Context>
 inline void lload(Context& ctx){
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.push(ctx.locais[static_cast<uint32_t>(b1)]);
-    ctx.push(ctx.locais[static_cast<uint32_t>(b1) + 1]);
+    ctx.push(ctx.get_local(static_cast<uint32_t>(b1)));
+    ctx.push(ctx.get_local(static_cast<uint32_t>(b1) + 1));
 }
 // Byte 0x17: pega Variável Local e coloca na pilha
 template <typename Context>
 inline void fload(Context& ctx){
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.push(ctx.locais[static_cast<uint32_t>(b1)]);
+    ctx.push(ctx.get_local(static_cast<uint32_t>(b1)));
 }
 // Byte 0x18: pega Variável Local e coloca na pilha
 template <typename Context>
 inline void dload(Context& ctx){
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.push(ctx.locais[static_cast<uint32_t>(b1)]);
-    ctx.push(ctx.locais[static_cast<uint32_t>(b1) + 1]);
+    ctx.push(ctx.get_local(static_cast<uint32_t>(b1)));
+    ctx.push(ctx.get_local(static_cast<uint32_t>(b1) + 1));
 }
 // Byte 0x19: pega Variável Local e coloca na pilha
 template <typename Context>
 inline void aload(Context& ctx){
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.push(ctx.locais[static_cast<uint32_t>(b1)]);
+    ctx.push(ctx.get_local(static_cast<uint32_t>(b1)));
 }
 // Byte 0x1A: pega Variável Local[0] (int) e coloca na pilha
 template <typename Context>
 inline void iload_0(Context& ctx) {
-    ctx.push(ctx.locais[0]);
+    ctx.push(ctx.get_local(0));
 }
 // Byte 0x1B: pega Variável Local[1] (int) e coloca na pilha
 template <typename Context>
 inline void iload_1(Context& ctx) {
-    ctx.push(ctx.locais[1]);
+    ctx.push(ctx.get_local(1));
 }
 // Byte 0x1C: pega Variável Local[2] (int) e coloca na pilha
 template <typename Context>
 inline void iload_2(Context& ctx) {
-    ctx.push(ctx.locais[2]);
+    ctx.push(ctx.get_local(2));
 }
 // Byte 0x1D: pega Variável Local[3] (int) e coloca na pilha
 template <typename Context>
 inline void iload_3(Context& ctx) {
-    ctx.push(ctx.locais[3]);
+    ctx.push(ctx.get_local(3));
 }
 // Byte 0x1E: pega Variável Local (long nos slots 0 e 1) e coloca na pilha
 template <typename Context>
 inline void lload_0(Context& ctx) {
-    ctx.push(ctx.locais[0]);
-    ctx.push(ctx.locais[1]); // ou ctx.push(0) se cada slot já guarda 64 bits
+    ctx.push(ctx.get_local(0));
+    ctx.push(ctx.get_local(1)); // ou ctx.push(0) se cada slot já guarda 64 bits
 }
 // Byte 0x1F: pega Variável Local (long nos slots 1 e 2) e coloca na pilha
 template <typename Context>
 inline void lload_1(Context& ctx) {
-    ctx.push(ctx.locais[1]);
-    ctx.push(ctx.locais[2]);
+    ctx.push(ctx.get_local(1));
+    ctx.push(ctx.get_local(2));
 }
 // Byte 0x20: pega Variável Local (long nos slots 2 e 3) e coloca na pilha
 template <typename Context>
 inline void lload_2(Context& ctx) {
-    ctx.push(ctx.locais[2]);
-    ctx.push(ctx.locais[3]);
+    ctx.push(ctx.get_local(2));
+    ctx.push(ctx.get_local(3));
 }
 // Byte 0x21: pega Variável Local (long nos slots 3 e 4) e coloca na pilha
 template <typename Context>
 inline void lload_3(Context& ctx) {
-    ctx.push(ctx.locais[3]);
-    ctx.push(ctx.locais[4]);
+    ctx.push(ctx.get_local(3));
+    ctx.push(ctx.get_local(4));
 }
 // Byte 0x22: pega Variável Local (float) e coloca na pilha
 template <typename Context>
 inline void fload_0(Context& ctx) {
-    ctx.push(ctx.locais[0]);
+    ctx.push(ctx.get_local(0));
 }
 // Byte 0x23: pega Variável Local (float) e coloca na pilha
 template <typename Context>
 inline void fload_1(Context& ctx) {
-    ctx.push(ctx.locais[1]);
+    ctx.push(ctx.get_local(1));
 }
 // Byte 0x24: pega Variável Local (float) e coloca na pilha
 template <typename Context>
 inline void fload_2(Context& ctx) {
-    ctx.push(ctx.locais[2]);
+    ctx.push(ctx.get_local(2));
 }
 // Byte 0x25: pega Variável Local (float) e coloca na pilha
 template <typename Context>
 inline void fload_3(Context& ctx) {
-    ctx.push(ctx.locais[3]);
+    ctx.push(ctx.get_local(3));
 }
 // Byte 0x26: pega Variável Local (double nos slots 0 e 1) e coloca na pilha
 template <typename Context>
 inline void dload_0(Context& ctx) {
-    ctx.push(ctx.locais[0]);
-    ctx.push(ctx.locais[1]); // ou ctx.push(0) se cada slot já guarda 64 bits
+    ctx.push(ctx.get_local(0));
+    ctx.push(ctx.get_local(1)); // ou ctx.push(0) se cada slot já guarda 64 bits
 }
 // Byte 0x27: pega Variável Local (double nos slots 1 e 2) e coloca na pilha
 template <typename Context>
 inline void dload_1(Context& ctx) {
-    ctx.push(ctx.locais[1]);
-    ctx.push(ctx.locais[2]);
+    ctx.push(ctx.get_local(1));
+    ctx.push(ctx.get_local(2));
 }
 // Byte 0x28: pega Variável Local (double nos slots 2 e 3) e coloca na pilha
 template <typename Context>
 inline void dload_2(Context& ctx) {
-    ctx.push(ctx.locais[2]);
-    ctx.push(ctx.locais[3]);
+    ctx.push(ctx.get_local(2));
+    ctx.push(ctx.get_local(3));
 }
 // Byte 0x29: pega Variável Local (double nos slots 3 e 4) e coloca na pilha
 template <typename Context>
 inline void dload_3(Context& ctx) {
-    ctx.push(ctx.locais[3]);
-    ctx.push(ctx.locais[4]);
+    ctx.push(ctx.get_local(3));
+    ctx.push(ctx.get_local(4));
 }
 // Byte 0x2A: pega Variável Local (referência no slot 0) e coloca na pilha
 template <typename Context>
 inline void aload_0(Context& ctx) {
-    ctx.push(ctx.locais[0]);
+    ctx.push(ctx.get_local(0));
 }
 // Byte 0x2B: pega Variável Local (referência no slot 1) e coloca na pilha
 template <typename Context>
 inline void aload_1(Context& ctx) {
-    ctx.push(ctx.locais[1]);
+    ctx.push(ctx.get_local(1));
 }
 // Byte 0x2C: pega Variável Local (referência no slot 2) e coloca na pilha
 template <typename Context>
 inline void aload_2(Context& ctx) {
-    ctx.push(ctx.locais[2]);
+    ctx.push(ctx.get_local(2));
 }
 // Byte 0x2D: pega Variável Local (referência no slot 3) e coloca na pilha
 template <typename Context>
 inline void aload_3(Context& ctx) {
-    ctx.push(ctx.locais[3]);
+    ctx.push(ctx.get_local(3));
 }
 // Byte 0x2E: 
 template <typename Context>
@@ -332,7 +332,7 @@ template <typename Context>
 inline void istore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.locais[static_cast<uint32_t>(b1)] = ctx.top(); ctx.pop();
+    ctx.set_local(static_cast<uint32_t>(b1), ctx.pop());
 }
 // Byte 0x37: desempilha long (2 slots) e guarda nas Variáveis Locais[b1] e [b1 + 1]
 template <typename Context>
@@ -340,15 +340,15 @@ inline void lstore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
     // Ordem inversa do lload: o segundo slot (b1 + 1) está no topo da pilha
-    ctx.locais[static_cast<uint32_t>(b1) + 1] = ctx.top(); ctx.pop();
-    ctx.locais[static_cast<uint32_t>(b1)]     = ctx.top(); ctx.pop();
+    ctx.set_local(static_cast<uint32_t>(b1) + 1, ctx.pop());
+    ctx.set_local(static_cast<uint32_t>(b1), ctx.pop());
 }
 // Byte 0x38: desempilha float e guarda na Variável Local[b1]
 template <typename Context>
 inline void fstore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.locais[static_cast<uint32_t>(b1)] = ctx.top(); ctx.pop();
+    ctx.set_local(static_cast<uint32_t>(b1), ctx.pop());
 }
 // Byte 0x39: desempilha double (2 slots) e guarda nas Variáveis Locais[b1] e [b1 + 1]
 template <typename Context>
@@ -356,123 +356,123 @@ inline void dstore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
     // Ordem inversa do dload: o segundo slot (b1 + 1) está no topo da pilha
-    ctx.locais[static_cast<uint32_t>(b1) + 1] = ctx.top(); ctx.pop();
-    ctx.locais[static_cast<uint32_t>(b1)]     = ctx.top(); ctx.pop();
+    ctx.set_local(static_cast<uint32_t>(b1) + 1, ctx.pop());
+    ctx.set_local(static_cast<uint32_t>(b1), ctx.pop());
 }
 // Byte 0x3A: desempilha referência e guarda na Variável Local[b1]
 template <typename Context>
 inline void astore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.locais[static_cast<uint32_t>(b1)] = ctx.top(); ctx.pop();
+    ctx.set_local(static_cast<uint32_t>(b1), ctx.pop());
 }
 // Byte 0x3B: desempilha int e guarda na Variável Local[0]
 template <typename Context>
 inline void istore_0(Context& ctx) {
-    ctx.locais[0] = ctx.top(); ctx.pop();
+    ctx.set_local(0, ctx.pop());
 }
 // Byte 0x3C: desempilha int e guarda na Variável Local[1]
 template <typename Context>
 inline void istore_1(Context& ctx) {
-    ctx.locais[1] = ctx.top(); ctx.pop();
+    ctx.set_local(1, ctx.pop());
 }
 // Byte 0x3D: desempilha int e guarda na Variável Local[2]
 template <typename Context>
 inline void istore_2(Context& ctx) {
-    ctx.locais[2] = ctx.top(); ctx.pop();
+    ctx.set_local(2, ctx.pop());
 }
 // Byte 0x3E: desempilha int e guarda na Variável Local[3]
 template <typename Context>
 inline void istore_3(Context& ctx) {
-    ctx.locais[3] = ctx.top(); ctx.pop();
+    ctx.set_local(3, ctx.pop());
 }
 // Byte 0x3F: desempilha long e guarda nas Variáveis Locais[0] e [1]
 template <typename Context>
 inline void lstore_0(Context& ctx) {
-    ctx.locais[1] = ctx.top(); ctx.pop();
-    ctx.locais[0] = ctx.top(); ctx.pop();
+    ctx.set_local(1, ctx.pop());
+    ctx.set_local(0, ctx.pop());
 }
 // Byte 0x40: desempilha long e guarda nas Variáveis Locais[1] e [2]
 template <typename Context>
 inline void lstore_1(Context& ctx) {
-    ctx.locais[2] = ctx.top(); ctx.pop();
-    ctx.locais[1] = ctx.top(); ctx.pop();
+    ctx.set_local(2, ctx.pop());
+    ctx.set_local(1, ctx.pop());
 }
 // Byte 0x41: desempilha long e guarda nas Variáveis Locais[2] e [3]
 template <typename Context>
 inline void lstore_2(Context& ctx) {
-    ctx.locais[3] = ctx.top(); ctx.pop();
-    ctx.locais[2] = ctx.top(); ctx.pop();
+    ctx.set_local(3, ctx.pop());
+    ctx.set_local(2, ctx.pop());
 }
 // Byte 0x42: desempilha long e guarda nas Variáveis Locais[3] e [4]
 template <typename Context>
 inline void lstore_3(Context& ctx) {
-    ctx.locais[4] = ctx.top(); ctx.pop();
-    ctx.locais[3] = ctx.top(); ctx.pop();
+    ctx.set_local(4, ctx.pop());
+    ctx.set_local(3, ctx.pop());
 }
 // Byte 0x43: desempilha float e guarda na Variável Local[0]
 template <typename Context>
 inline void fstore_0(Context& ctx) {
-    ctx.locais[0] = ctx.top(); ctx.pop();
+    ctx.set_local(0, ctx.pop());
 }
 // Byte 0x44: desempilha float e guarda na Variável Local[1]
 template <typename Context>
 inline void fstore_1(Context& ctx) {
-    ctx.locais[1] = ctx.top(); ctx.pop();
+    ctx.set_local(1, ctx.pop());
 }
 // Byte 0x45: desempilha float e guarda na Variável Local[2]
 template <typename Context>
 inline void fstore_2(Context& ctx) {
-    ctx.locais[2] = ctx.top(); ctx.pop();
+    ctx.set_local(2, ctx.pop());
 }
 // Byte 0x46: desempilha float e guarda na Variável Local[3]
 template <typename Context>
 inline void fstore_3(Context& ctx) {
-    ctx.locais[3] = ctx.top(); ctx.pop();
+    ctx.set_local(3, ctx.pop());
 }
 // Byte 0x47: desempilha double e guarda nas Variáveis Locais[0] e [1]
 template <typename Context>
 inline void dstore_0(Context& ctx) {
-    ctx.locais[1] = ctx.top(); ctx.pop();
-    ctx.locais[0] = ctx.top(); ctx.pop();
+    ctx.set_local(1, ctx.pop());
+    ctx.set_local(0, ctx.pop());
 }
 // Byte 0x48: desempilha double e guarda nas Variáveis Locais[1] e [2]
 template <typename Context>
 inline void dstore_1(Context& ctx) {
-    ctx.locais[2] = ctx.top(); ctx.pop();
-    ctx.locais[1] = ctx.top(); ctx.pop();
+    ctx.set_local(2, ctx.pop());
+    ctx.set_local(1, ctx.pop());
 }
 // Byte 0x49: desempilha double e guarda nas Variáveis Locais[2] e [3]
 template <typename Context>
 inline void dstore_2(Context& ctx) {
-    ctx.locais[3] = ctx.top(); ctx.pop();
-    ctx.locais[2] = ctx.top(); ctx.pop();
+    ctx.set_local(3, ctx.pop());
+    ctx.set_local(2, ctx.pop());
 }
 // Byte 0x4A: desempilha double e guarda nas Variáveis Locais[3] e [4]
 template <typename Context>
 inline void dstore_3(Context& ctx) {
-    ctx.locais[4] = ctx.top(); ctx.pop();
-    ctx.locais[3] = ctx.top(); ctx.pop();
+    ctx.set_local(4, ctx.pop());
+    ctx.set_local(3, ctx.pop());
 }
 // Byte 0x4B: desempilha referência e guarda na Variável Local[0]
 template <typename Context>
 inline void astore_0(Context& ctx) {
-    ctx.locais[0] = ctx.top(); ctx.pop();
+    ctx.set_local(0, ctx.pop());
 }
 // Byte 0x4C: desempilha referência e guarda na Variável Local[1]
 template <typename Context>
 inline void astore_1(Context& ctx) {
-    ctx.locais[1] = ctx.top(); ctx.pop();
+    ctx.set_local(1, ctx.pop());
 }
 // Byte 0x4D: desempilha referência e guarda na Variável Local[2]
 template <typename Context>
 inline void astore_2(Context& ctx) {
-    ctx.locais[2] = ctx.top(); ctx.pop();
+    ctx.set_local(2, ctx.pop());
 }
 // Byte 0x4E: desempilha referência e guarda na Variável Local[3]
 template <typename Context>
 inline void astore_3(Context& ctx) {
-    ctx.locais[3] = ctx.top(); ctx.pop();
+    ctx.set_local(3, ctx.pop());
 }
 // Byte 0x4F: grava int em array no Heap
 template <typename Context>
@@ -1155,7 +1155,7 @@ inline void iinc(Context& ctx) {
     // 3. Extensão de sinal de 8 bits para 32 bits
     int32_t constante = static_cast<int32_t>(b1);
     // 4. Soma diretamente na variável local apontada por 'index' (sem tocar na pilha!)
-    ctx.locais[index] += constante;
+    ctx.set_local(index, ctx.get_local(index) + 1);
 }
 // Byte 0x85: i2l - Converte int (1 slot) para long (2 slots)
 template <typename Context>
@@ -1701,7 +1701,7 @@ inline void op_03(Context& ctx) {
 template <typename Context>
 inline void LOCAL(Context& ctx) {
     if (!ctx.empty()) {
-        ctx.locais[0] = ctx.top();
+        ctx.set_local(0, ctx.top());
         ctx.pop();
     }
 }
@@ -1709,7 +1709,7 @@ inline void LOCAL(Context& ctx) {
 // Byte 0x05: Carrega da Variável Local [0] e empilha no topo
 template <typename Context>
 inline void op_05_load0(Context& ctx) {
-    ctx.push(ctx.locais[0]);
+    ctx.push(ctx.get_local(0));
 }
 
 // Byte 0xFF: NÃO FAZ WBGObnglrbLN6544684&*%$$$ SINBORAUM
