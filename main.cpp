@@ -34,6 +34,7 @@ int main() {
     std::cout << "Metodos:          " << classe.methods.size() << "\n";
     std::cout << "========================================\n";
 
+    /*===========VAI DORETO PARA EXECUÇÃO====================*/
     // 2. Localiza o metodo 'main' sem depender de nomes de classes externas
     const MethodInfo* metodo_main = classe.buscar_main();
     if (!metodo_main) {
