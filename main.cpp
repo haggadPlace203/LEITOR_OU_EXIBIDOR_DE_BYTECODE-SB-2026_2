@@ -1,56 +1,71 @@
+/*==================================================*/
+/*  Informações sobre o desenvolvedor & assinatura  */
+/*   Carlos Luan Silva Pereira - Eng. Mecatrônica   */
+/*       Estudante da Universidade de Brasília      */
+/*           Brasília - DF - 18/11/2026             */
+/*==================================================*/
+
 #include <iostream>
+#include <string>
 #include <vector>
 #include <stdint.h>
 
-// Liberdade total: ambos importados apenas aqui, em qualquer ordem
+// Os cabecalhos podem ser importados em qualquer ordem
+#include "CARREGADOR.h"
 #include "BYTECODE.h"
 #include "METODOS.h"
 
 int main() {
-    // 1. Atributo 'code' extraído de um método da classe Java
-    std::vector<uint8_t> atributo_code_metodo = { 
-        // --- INICIALIZAÇÃO (contador = 0) ---
-        0x03,             // [0]  iconst_0   : Empilha 0
-        0x3B,             // [1]  istore_0   : Salva 0 na variável local 0 (contador)
+    std::string class_route;
+    std::cout << "Digite o caminho do arquivo .class (ex: JAVA/TA1.class): ";
+    std::getline(std::cin, class_route);
 
-        // --- INÍCIO DO LAÇO (PC = 2) ---
-        0x1A,             // [2]  iload_0    : Carrega contador na pilha
-        0x10, 0x0A,       // [3]  bipush 10  : Empilha 10 (limite do laço)
-        0xA2, 0x00, 0x0C, // [5]  if_icmpge +12 : Se contador >= 10, pula para [17] (5 + 12 = 17)
+    // 1. Carrega o arquivo .class na estrutura separada ClassFile
+    ClassFile classe = carregar_classe(class_route);
+    if (!classe.carregado) {
+        return 1;
+    }
 
-        // --- CORPO DO LAÇO ---
-        0x1A,             // [8]  iload_0    : Carrega contador na pilha
-        0x59,             // [9]  dup        : Duplica o valor no topo da pilha
-        0xFF,             // [10] debug      : Desempilha a cópia e imprime (sobra o original na pilha)
-        0x57,             // [11] pop        : Descarta o valor original para manter a pilha limpa
+    std::cout << "========================================\n";
+    std::cout << "Classe carregada: " << classe.this_class_name << "\n";
+    std::cout << "Superclasse:      " << classe.super_class_name << "\n";
+    std::cout << "Versao Java:      " << (classe.major_version - 44) << "\n";
+    std::cout << "Entradas CP:      " << (classe.constant_pool_count - 1) << "\n";
+    std::cout << "Metodos:          " << classe.methods.size() << "\n";
+    std::cout << "========================================\n";
 
-        // --- INCREMENTO E RETORNO ---
-        0x84, 0x00, 0x01, // [12] iinc 0, 1  : Incrementa variável local 0 em +1
-        0xA7, 0xFF, 0xF3, // [15] goto -13   : Volta para [2] (15 + (-13) = 2)
+    // 2. Localiza o metodo 'main' sem depender de nomes de classes externas
+    const MethodInfo* metodo_main = classe.buscar_main();
+    if (!metodo_main) {
+        metodo_main = classe.buscar_metodo("main");
+    }
 
-        // --- FIM DO PROGRAMA (PC = 18) ---
-        0xB1              // [18] return     : Encerra o método
-        
-        /*0x06, 0x10, 0xFE, 0xFF,
-        0x06, 0x10, 0x55, 0xFF,
-        0x11, 0x55, 0xAA, 0xFF,
-        0x06, 0x10, 0x80, 0xFF*/
-    };
+    if (!metodo_main || !metodo_main->code_attr.has_code) {
+        std::cerr << "Erro: Metodo 'main' com atributo Code nao encontrado.\n";
+        return 1;
+    }
 
-    // 2. Criação do Frame de Método (VMContext) passando os limites N e o atributo 'code'
-    /*============max stack, max local max temps*/
-    VMContext frame_metodo(10, 5, 5, atributo_code_metodo);
+    std::cout << "Executando metodo: " << metodo_main->name << metodo_main->descriptor
+              << " (max_stack=" << metodo_main->code_attr.max_stack
+              << ", max_locals=" << metodo_main->code_attr.max_locals
+              << ", bytes=" << metodo_main->code_attr.code.size() << ")\n\n";
 
-    // 3. Recupera a tabela hash vinculada ao tipo VMContext
+    // 3. Criacao do Frame de Metodo (VMContext) com os dados extraidos do .class
+    VMContext frame_metodo(
+        metodo_main->code_attr.max_stack,
+        metodo_main->code_attr.max_locals,
+        5,
+        metodo_main->code_attr.code
+    );
+
+    // 4. Recupera a tabela hash vinculada ao tipo VMContext
     const auto& bytecode_map = get_instruction<VMContext>();
 
-    // 4. Loop de execução guiado pelo PC do frame
+    // 5. Loop de execucao guiado pelo PC do frame
     while (frame_metodo.pc < frame_metodo.code.size()) {
-
         std::cout << "PCI = " << frame_metodo.pc << std::endl;
         uint8_t byte_atual = frame_metodo.code[frame_metodo.pc];
         frame_metodo.pc++;
-        //std::cout << "PCF = " << frame_metodo.pc << std::endl;
 
         auto it = bytecode_map.find(byte_atual);
         if (it != bytecode_map.end()) {
@@ -58,14 +73,23 @@ int main() {
         } else {
             std::cout << "Bytecode desconhecido: 0x"
                       << std::hex << static_cast<int>(byte_atual) << std::dec << std::endl;
+            break;
         }
     }
 
-    // 5. Resultados finais no frame
-    std::cout << "=== EXECUCAO DO METODO CONCLUIDA ===" << std::endl;
+    // 6. Resultados finais no frame
+    std::cout << "\n=== EXECUCAO DO METODO CONCLUIDA ===" << std::endl;
     std::cout << "Total de bytes executados (PC): " << frame_metodo.pc << std::endl;
     std::cout << "Topo da Pilha (32 bits): " << frame_metodo.top() << std::endl;
-    std::cout << "Variavel Local [0]: " << frame_metodo.locais[0] << std::endl;
+    if (frame_metodo.locais.size() > 1) {
+        std::cout << "Variavel Local [1]: " << frame_metodo.locais[1] << std::endl;
+    }
+    if (frame_metodo.locais.size() > 2) {
+        std::cout << "Variavel Local [2]: " << frame_metodo.locais[2] << std::endl;
+    }
+    if (frame_metodo.locais.size() > 3) {
+        std::cout << "Variavel Local [3]: " << frame_metodo.locais[3] << std::endl;
+    }
 
     return 0;
 }
