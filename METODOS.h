@@ -18,6 +18,7 @@ struct VMContext {
     // 4. CONTROLE DO MÉTODO: Program Counter (pc) e o atributo 'code' vindo do main
     uint32_t pc;
     const std::vector<uint8_t>& code;
+    bool erro_execucao;
 
     // Construtor: Permite criar o frame passando os limites N e o atributo 'code' diretamente do main
     VMContext(size_t max_stack, size_t max_locals, size_t max_temps, const std::vector<uint8_t>& atributo_code)
@@ -32,6 +33,7 @@ struct VMContext {
         if (static_cast<size_t>(topo_pilha + 1) < pilha.size()) {
             pilha[++topo_pilha] = val;
         }else{
+            erro_execucao = true;
             std::cerr << "Erro: Stack overflow em VMContext (pc=" << pc << ").\n";
         }
     }
@@ -40,6 +42,7 @@ struct VMContext {
         if (topo_pilha >= 0) {
             return pilha[topo_pilha--];
         }
+        erro_execucao = true;
         std::cerr << "Erro: Stack underflow em VMContext (pc=" << pc << ").\n";
         return INT32_C(0);
     }
@@ -60,6 +63,7 @@ struct VMContext {
         if (idx < locais.size()) {
             locais[idx] = val;
         } else {
+            erro_execucao = true;
             std::cerr << "Aviso: Escrita ignorada em variavel local fora do limite (" << idx << ").\n";
         }
     }
