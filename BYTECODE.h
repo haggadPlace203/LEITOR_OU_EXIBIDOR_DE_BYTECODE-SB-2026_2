@@ -332,7 +332,7 @@ template <typename Context>
 inline void istore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.locais[static_cast<uint32_t>(b1)] = ctx.pop();
+    ctx.locais[static_cast<uint32_t>(b1)] = ctx.top(); ctx.pop();
 }
 // Byte 0x37: desempilha long (2 slots) e guarda nas Variáveis Locais[b1] e [b1 + 1]
 template <typename Context>
@@ -340,15 +340,15 @@ inline void lstore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
     // Ordem inversa do lload: o segundo slot (b1 + 1) está no topo da pilha
-    ctx.locais[static_cast<uint32_t>(b1) + 1] = ctx.pop();
-    ctx.locais[static_cast<uint32_t>(b1)]     = ctx.pop();
+    ctx.locais[static_cast<uint32_t>(b1) + 1] = ctx.top(); ctx.pop();
+    ctx.locais[static_cast<uint32_t>(b1)]     = ctx.top(); ctx.pop();
 }
 // Byte 0x38: desempilha float e guarda na Variável Local[b1]
 template <typename Context>
 inline void fstore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.locais[static_cast<uint32_t>(b1)] = ctx.pop();
+    ctx.locais[static_cast<uint32_t>(b1)] = ctx.top(); ctx.pop();
 }
 // Byte 0x39: desempilha double (2 slots) e guarda nas Variáveis Locais[b1] e [b1 + 1]
 template <typename Context>
@@ -356,123 +356,123 @@ inline void dstore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
     // Ordem inversa do dload: o segundo slot (b1 + 1) está no topo da pilha
-    ctx.locais[static_cast<uint32_t>(b1) + 1] = ctx.pop();
-    ctx.locais[static_cast<uint32_t>(b1)]     = ctx.pop();
+    ctx.locais[static_cast<uint32_t>(b1) + 1] = ctx.top(); ctx.pop();
+    ctx.locais[static_cast<uint32_t>(b1)]     = ctx.top(); ctx.pop();
 }
 // Byte 0x3A: desempilha referência e guarda na Variável Local[b1]
 template <typename Context>
 inline void astore(Context& ctx) {
     uint8_t b1 = ctx.code[ctx.pc];
     ctx.pc++;
-    ctx.locais[static_cast<uint32_t>(b1)] = ctx.pop();
+    ctx.locais[static_cast<uint32_t>(b1)] = ctx.top(); ctx.pop();
 }
 // Byte 0x3B: desempilha int e guarda na Variável Local[0]
 template <typename Context>
 inline void istore_0(Context& ctx) {
-    ctx.locais[0] = ctx.pop();
+    ctx.locais[0] = ctx.top(); ctx.pop();
 }
 // Byte 0x3C: desempilha int e guarda na Variável Local[1]
 template <typename Context>
 inline void istore_1(Context& ctx) {
-    ctx.locais[1] = ctx.pop();
+    ctx.locais[1] = ctx.top(); ctx.pop();
 }
 // Byte 0x3D: desempilha int e guarda na Variável Local[2]
 template <typename Context>
 inline void istore_2(Context& ctx) {
-    ctx.locais[2] = ctx.pop();
+    ctx.locais[2] = ctx.top(); ctx.pop();
 }
 // Byte 0x3E: desempilha int e guarda na Variável Local[3]
 template <typename Context>
 inline void istore_3(Context& ctx) {
-    ctx.locais[3] = ctx.pop();
+    ctx.locais[3] = ctx.top(); ctx.pop();
 }
 // Byte 0x3F: desempilha long e guarda nas Variáveis Locais[0] e [1]
 template <typename Context>
 inline void lstore_0(Context& ctx) {
-    ctx.locais[1] = ctx.pop();
-    ctx.locais[0] = ctx.pop();
+    ctx.locais[1] = ctx.top(); ctx.pop();
+    ctx.locais[0] = ctx.top(); ctx.pop();
 }
 // Byte 0x40: desempilha long e guarda nas Variáveis Locais[1] e [2]
 template <typename Context>
 inline void lstore_1(Context& ctx) {
-    ctx.locais[2] = ctx.pop();
-    ctx.locais[1] = ctx.pop();
+    ctx.locais[2] = ctx.top(); ctx.pop();
+    ctx.locais[1] = ctx.top(); ctx.pop();
 }
 // Byte 0x41: desempilha long e guarda nas Variáveis Locais[2] e [3]
 template <typename Context>
 inline void lstore_2(Context& ctx) {
-    ctx.locais[3] = ctx.pop();
-    ctx.locais[2] = ctx.pop();
+    ctx.locais[3] = ctx.top(); ctx.pop();
+    ctx.locais[2] = ctx.top(); ctx.pop();
 }
 // Byte 0x42: desempilha long e guarda nas Variáveis Locais[3] e [4]
 template <typename Context>
 inline void lstore_3(Context& ctx) {
-    ctx.locais[4] = ctx.pop();
-    ctx.locais[3] = ctx.pop();
+    ctx.locais[4] = ctx.top(); ctx.pop();
+    ctx.locais[3] = ctx.top(); ctx.pop();
 }
 // Byte 0x43: desempilha float e guarda na Variável Local[0]
 template <typename Context>
 inline void fstore_0(Context& ctx) {
-    ctx.locais[0] = ctx.pop();
+    ctx.locais[0] = ctx.top(); ctx.pop();
 }
 // Byte 0x44: desempilha float e guarda na Variável Local[1]
 template <typename Context>
 inline void fstore_1(Context& ctx) {
-    ctx.locais[1] = ctx.pop();
+    ctx.locais[1] = ctx.top(); ctx.pop();
 }
 // Byte 0x45: desempilha float e guarda na Variável Local[2]
 template <typename Context>
 inline void fstore_2(Context& ctx) {
-    ctx.locais[2] = ctx.pop();
+    ctx.locais[2] = ctx.top(); ctx.pop();
 }
 // Byte 0x46: desempilha float e guarda na Variável Local[3]
 template <typename Context>
 inline void fstore_3(Context& ctx) {
-    ctx.locais[3] = ctx.pop();
+    ctx.locais[3] = ctx.top(); ctx.pop();
 }
 // Byte 0x47: desempilha double e guarda nas Variáveis Locais[0] e [1]
 template <typename Context>
 inline void dstore_0(Context& ctx) {
-    ctx.locais[1] = ctx.pop();
-    ctx.locais[0] = ctx.pop();
+    ctx.locais[1] = ctx.top(); ctx.pop();
+    ctx.locais[0] = ctx.top(); ctx.pop();
 }
 // Byte 0x48: desempilha double e guarda nas Variáveis Locais[1] e [2]
 template <typename Context>
 inline void dstore_1(Context& ctx) {
-    ctx.locais[2] = ctx.pop();
-    ctx.locais[1] = ctx.pop();
+    ctx.locais[2] = ctx.top(); ctx.pop();
+    ctx.locais[1] = ctx.top(); ctx.pop();
 }
 // Byte 0x49: desempilha double e guarda nas Variáveis Locais[2] e [3]
 template <typename Context>
 inline void dstore_2(Context& ctx) {
-    ctx.locais[3] = ctx.pop();
-    ctx.locais[2] = ctx.pop();
+    ctx.locais[3] = ctx.top(); ctx.pop();
+    ctx.locais[2] = ctx.top(); ctx.pop();
 }
 // Byte 0x4A: desempilha double e guarda nas Variáveis Locais[3] e [4]
 template <typename Context>
 inline void dstore_3(Context& ctx) {
-    ctx.locais[4] = ctx.pop();
-    ctx.locais[3] = ctx.pop();
+    ctx.locais[4] = ctx.top(); ctx.pop();
+    ctx.locais[3] = ctx.top(); ctx.pop();
 }
 // Byte 0x4B: desempilha referência e guarda na Variável Local[0]
 template <typename Context>
 inline void astore_0(Context& ctx) {
-    ctx.locais[0] = ctx.pop();
+    ctx.locais[0] = ctx.top(); ctx.pop();
 }
 // Byte 0x4C: desempilha referência e guarda na Variável Local[1]
 template <typename Context>
 inline void astore_1(Context& ctx) {
-    ctx.locais[1] = ctx.pop();
+    ctx.locais[1] = ctx.top(); ctx.pop();
 }
 // Byte 0x4D: desempilha referência e guarda na Variável Local[2]
 template <typename Context>
 inline void astore_2(Context& ctx) {
-    ctx.locais[2] = ctx.pop();
+    ctx.locais[2] = ctx.top(); ctx.pop();
 }
 // Byte 0x4E: desempilha referência e guarda na Variável Local[3]
 template <typename Context>
 inline void astore_3(Context& ctx) {
-    ctx.locais[3] = ctx.pop();
+    ctx.locais[3] = ctx.top(); ctx.pop();
 }
 // Byte 0x4F: grava int em array no Heap
 template <typename Context>
@@ -528,15 +528,15 @@ inline void pop2(Context& ctx) {
 // Byte 0x59: duplica o slot do topo [..., v1] -> [..., v1, v1]
 template <typename Context>
 inline void dup(Context& ctx) {
-    auto v1 = ctx.pop();
+    auto v1 = ctx.top(); ctx.pop();
     ctx.push(v1);
     ctx.push(v1);
 }
 // Byte 0x5A: duplica o topo e insere 1 slot abaixo [..., v2, v1] -> [..., v1, v2, v1]
 template <typename Context>
 inline void dup_x1(Context& ctx) {
-    auto v1 = ctx.pop();
-    auto v2 = ctx.pop();
+    auto v1 = ctx.top(); ctx.pop();
+    auto v2 = ctx.top(); ctx.pop();
     ctx.push(v1);
     ctx.push(v2);
     ctx.push(v1);
@@ -544,9 +544,9 @@ inline void dup_x1(Context& ctx) {
 // Byte 0x5B: duplica o topo e insere 2 slots abaixo [..., v3, v2, v1] -> [..., v1, v3, v2, v1]
 template <typename Context>
 inline void dup_x2(Context& ctx) {
-    auto v1 = ctx.pop();
-    auto v2 = ctx.pop();
-    auto v3 = ctx.pop();
+    auto v1 = ctx.top(); ctx.pop();
+    auto v2 = ctx.top(); ctx.pop();
+    auto v3 = ctx.top(); ctx.pop();
     ctx.push(v1);
     ctx.push(v3);
     ctx.push(v2);
@@ -555,8 +555,8 @@ inline void dup_x2(Context& ctx) {
 // Byte 0x5C: duplica os 2 slots do topo [..., v2, v1] -> [..., v2, v1, v2, v1]
 template <typename Context>
 inline void dup2(Context& ctx) {
-    auto v1 = ctx.pop();
-    auto v2 = ctx.pop();
+    auto v1 = ctx.top(); ctx.pop();
+    auto v2 = ctx.top(); ctx.pop();
     ctx.push(v2);
     ctx.push(v1);
     ctx.push(v2);
@@ -565,9 +565,9 @@ inline void dup2(Context& ctx) {
 // Byte 0x5D: duplica os 2 slots do topo e insere 1 slot abaixo [..., v3, v2, v1] -> [..., v2, v1, v3, v2, v1]
 template <typename Context>
 inline void dup2_x1(Context& ctx) {
-    auto v1 = ctx.pop();
-    auto v2 = ctx.pop();
-    auto v3 = ctx.pop();
+    auto v1 = ctx.top(); ctx.pop();
+    auto v2 = ctx.top(); ctx.pop();
+    auto v3 = ctx.top(); ctx.pop();
     ctx.push(v2);
     ctx.push(v1);
     ctx.push(v3);
@@ -577,10 +577,10 @@ inline void dup2_x1(Context& ctx) {
 // Byte 0x5E: duplica os 2 slots do topo e insere 2 slots abaixo [..., v4, v3, v2, v1] -> [..., v2, v1, v4, v3, v2, v1]
 template <typename Context>
 inline void dup2_x2(Context& ctx) {
-    auto v1 = ctx.pop();
-    auto v2 = ctx.pop();
-    auto v3 = ctx.pop();
-    auto v4 = ctx.pop();
+    auto v1 = ctx.top(); ctx.pop();
+    auto v2 = ctx.top(); ctx.pop();
+    auto v3 = ctx.top(); ctx.pop();
+    auto v4 = ctx.top(); ctx.pop();
     ctx.push(v2);
     ctx.push(v1);
     ctx.push(v4);
@@ -591,8 +591,8 @@ inline void dup2_x2(Context& ctx) {
 // Byte 0x5F: inverte os 2 slots do topo [..., v2, v1] -> [..., v1, v2]
 template <typename Context>
 inline void swap(Context& ctx) {
-    auto v1 = ctx.pop();
-    auto v2 = ctx.pop();
+    auto v1 = ctx.top(); ctx.pop();
+    auto v2 = ctx.top(); ctx.pop();
     ctx.push(v1);
     ctx.push(v2);
 }
