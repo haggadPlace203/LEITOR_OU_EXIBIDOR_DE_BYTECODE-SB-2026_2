@@ -1681,6 +1681,7 @@ inline void goto_JVM(Context& ctx) {
 
 
 
+
 /*=========EXEMPLOS A SEREM APAGADOS DEPOIS =========*/
 
 // Byte 0x03: Remove os dois valores do topo, soma em 32 bits e empilha o resultado
@@ -1719,6 +1720,81 @@ inline void TMP(Context& ctx){
     std::cout << "Topo da pilha: " << std::hex << ctx.top() << std::dec << std::endl;
     ctx.pop();
 }
+
+// Byte 0xB2: getstatic - Resolve campo estático no Constant Pool e empilha referência/valor
+template <typename Context>
+inline void getstatic_JVM(Context& ctx) {
+    if (ctx.pc + 1 >= ctx.code.size()) {
+        std::cerr << "Erro: getstatic sem operandos suficientes no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t high = ctx.code[ctx.pc++];
+    uint16_t low  = ctx.code[ctx.pc++];
+    uint16_t cp_index = static_cast<uint16_t>((high << 8) | low);
+
+    if (!ctx.classe || cp_index == 0 || cp_index >= ctx.classe->constant_pool.size()) {
+        std::cerr << "Erro: indice invalido no Constant Pool em getstatic (#" << cp_index << ")\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    const auto& cp = ctx.classe->constant_pool;
+    const auto& entry = cp[cp_index];
+
+    // Em um .class, getstatic aponta para CONSTANT_Fieldref (tag 9):
+    // index1 -> CONSTANT_Class (tag 7), index2 -> CONSTANT_NameAndType (tag 12)
+    std::string nome_classe = resolver_cp_string(cp, entry.index1);
+    std::string nome_e_desc = resolver_cp_string(cp, entry.index2);
+
+    std::cout << "[getstatic #" << cp_index << "] " << nome_classe << "." << nome_e_desc << "\n";
+
+    // Como o simulador ainda não tem Heap/objetos reais de PrintStream,
+    // empilhamos um placeholder (ex.: 1) para que a pilha não fique vazia nos próximos bytecodes.
+    ctx.push(INT32_C(0XFFFF));
+}
+// Byte 0xB6: getstatic - Resolve campo estático no Constant Pool e empilha referência/valor
+template <typename Context>
+inline void invokevirtual_JVM(Context& ctx) {
+    if (ctx.pc + 1 >= ctx.code.size() || !ctx.classe) {
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t idx = static_cast<uint16_t>((ctx.code[ctx.pc] << 8) | ctx.code[ctx.pc + 1]);
+    ctx.pc += 2;
+
+    const auto& cp = ctx.classe->constant_pool;
+    std::string classe_nome = resolver_cp_string(cp, cp[idx].index1);
+    std::string nome_desc   = resolver_cp_string(cp, cp[idx].index2);
+
+    std::cout << "[invokevirtual #" << idx << "] " << classe_nome << "." << nome_desc << "\n";
+
+    // Exemplo para print:(I)V ou println:(I)V:
+    // 1. Desempilha o argumento int (topo)
+    int32_t arg_int = ctx.pop();
+    // 2. Desempilha o objeto receptor (ex.: System.out)
+    int32_t obj_ref = ctx.pop();
+
+    if (ctx.erro_execucao) return;
+
+    if (obj_ref == 0) {
+        std::cerr << "Erro: NullPointerException em invokevirtual\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    std::cout << "\nSystem.out => ";
+    if (nome_desc.rfind("print:", 0) == 0) {
+        std::cout << arg_int;
+    } else if (nome_desc.rfind("println:", 0) == 0) {
+        std::cout << arg_int << "\n";
+    }
+    std::cout << "\n\n";
+}
+
+
 
 /*======TABELA HASH FUNÇÕES BYTECODE=====*/
 // Tabela hash parametrizada pelo tipo Context (instanciada no main.cpp)
@@ -1919,6 +1995,11 @@ inline const std::unordered_map<uint8_t, void (*)(Context&)>& get_instruction() 
         map[0xA7] = goto_JVM<Context>;
 
 
+
+        map[0xB2] = getstatic_JVM<Context>;
+        map[0xBB] = getstatic_JVM<Context>;
+        map[0xB7] = getstatic_JVM<Context>;
+        map[0xB6] = invokevirtual_JVM<Context>;
 
 
         map[0xFE] = LOCAL<Context>;
