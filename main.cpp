@@ -21,8 +21,7 @@ int main(int argc, char* argv[]) {
         class_route = argv[1];
     } else {
         std::cout << "Digite o caminho do arquivo .class (ex: JAVA/TA1.class): ";
-        //std::getline(std::cin, class_route);
-        class_route = "JAVA/A.class";
+        std::getline(std::cin, class_route);
     }
 
     if (class_route.empty()) {
