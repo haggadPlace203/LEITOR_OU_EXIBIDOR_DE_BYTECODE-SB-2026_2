@@ -18,16 +18,19 @@ struct VMContext {
     // 4. CONTROLE DO MÉTODO: Program Counter (pc) e o atributo 'code' vindo do main
     uint32_t pc;
     const std::vector<uint8_t>& code;
+    const ClassFile* classe;
     bool erro_execucao;
 
     // Construtor: Permite criar o frame passando os limites N e o atributo 'code' diretamente do main
-    VMContext(size_t max_stack, size_t max_locals, size_t max_temps, const std::vector<uint8_t>& atributo_code)
+    VMContext(size_t max_stack, size_t max_locals, size_t max_temps, const std::vector<uint8_t>& atributo_code, const ClassFile* classe_carregada = nullptr)
         : pilha(max_stack, INT32_C(0)),
           topo_pilha(-1),
           locais(max_locals, INT32_C(0)),
           temporarias(max_temps, INT32_C(0)),
           pc(0),
-          code(atributo_code){}
+          code(atributo_code),
+          classe(classe_carregada),
+          erro_execucao(false) {}
 
     void push(int32_t val) {
         if (static_cast<size_t>(topo_pilha + 1) < pilha.size()) {
