@@ -21,7 +21,8 @@ int main(int argc, char* argv[]) {
         class_route = argv[1];
     } else {
         std::cout << "Digite o caminho do arquivo .class (ex: JAVA/TA1.class): ";
-        std::getline(std::cin, class_route);
+        //std::getline(std::cin, class_route);
+        class_route = "JAVA/A.class";
     }
 
     if (class_route.empty()) {
@@ -43,6 +44,18 @@ int main(int argc, char* argv[]) {
     std::cout << "Metodos:          " << classe.methods.size() << "\n";
     std::cout << "========================================\n";
 
+
+
+    std::cout << "\n-----------------------------------\n";
+    for(int sd = 0;sd < classe.constant_pool.size(); sd++){
+        std::cout << "CP[" << sd << "] = 0x"
+                  << std::hex << static_cast<int>(classe.constant_pool[sd].tag) << std::dec << "\n";
+    }
+    std::cout << "\0";
+    std::cout << "\n-----------------------------------\n";
+
+
+
     // 3. Resolucao do ponto de entrada (public static void main(String[]))
     const MethodInfo* metodo_main = classe.buscar_main();
     if (!metodo_main) {
@@ -61,14 +74,24 @@ int main(int argc, char* argv[]) {
 
     // 4. Criacao do Frame de execucao do metodo
     VMContext frame_metodo(
-        metodo_main->code_attr.max_stack,
+        metodo_main->code_attr.max_stack + 10,
         metodo_main->code_attr.max_locals,
         5,
-        metodo_main->code_attr.code
+        metodo_main->code_attr.code,
+        &classe
     );
 
     // 5. Tabela de despacho de instrucoes (Opcode -> Funcao)
     const auto& bytecode_map = get_instruction<VMContext>();
+
+
+    std::cout << "\n-----------------------------------\n";
+    for(int sd = 0;sd < frame_metodo.code.size(); sd++){
+        std::cout << "SD[" << sd << "] = 0x"
+                  << std::hex << static_cast<int>(frame_metodo.code[sd]) << std::dec << "\n";
+    }
+    std::cout << "\n-----------------------------------\n";
+
 
     // 6. Ciclo Fetch -> Decode -> Execute
     while (frame_metodo.pc < frame_metodo.code.size() && !frame_metodo.erro_execucao) {
@@ -94,6 +117,20 @@ int main(int argc, char* argv[]) {
             frame_metodo.erro_execucao = true;
             break;
         }
+
+        std::cout << "LOCAIS = [";
+        for(int sd = 0;sd < frame_metodo.locais.size(); sd++){
+            std::cout << std::hex << static_cast<int>(frame_metodo.locais[sd]) << std::dec << " ";
+        }
+        std::cout << "]\n";
+        std::cout << "PILHA = [";
+        for(int sd = 0;sd < frame_metodo.pilha.size(); sd++){
+            std::cout << std::hex << static_cast<int>(frame_metodo.pilha[sd]) << std::dec << " ";
+        }
+        std::cout << "]\n";
+        std::cout << "TOPO PILHA = " << frame_metodo.topo_pilha << "\n";
+        std::cout << "\n-----------------------------------\n";
+
     }
 
     // 7. Relatorio final do estado do Frame
