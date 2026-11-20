@@ -2,7 +2,7 @@
 /*  Informações sobre o desenvolvedor & assinatura  */
 /*   Carlos Luan Silva Pereira - Eng. Mecatrônica   */
 /*       Estudante da Universidade de Brasília      */
-/*           Brasília - DF - 14/11/2026             */
+/*           Brasília - DF - 20/11/2026             */
 /*==================================================*/
 
 #ifndef BYTECODE_H
@@ -121,27 +121,127 @@ inline void sipush(Context& ctx){
     uint16_t b3 = (b1 << 8) + b2;
     ctx.push(static_cast<int32_t>(static_cast<int16_t>(b3)));
 }
-// Byte 0x12: 
+
 template <typename Context>
-inline void ldc(Context& ctx){
-    uint8_t b1 = ctx.code[ctx.pc];
-    ctx.pc++;
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void ldc_resolver_1slot(Context& ctx, uint16_t cp_index, const char* mnemonico) {
+    if (!ctx.classe || cp_index == 0 || cp_index >= ctx.classe->constant_pool.size()) {
+        std::cerr << "Erro: indice invalido no Constant Pool em " << mnemonico
+                  << " (#" << cp_index << ") no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    const auto& cp = ctx.classe->constant_pool;
+    const auto& entry = cp[cp_index];
+
+    switch (entry.tag) {
+        case 3: { // CONSTANT_Integer (32 bits)
+            ctx.push(static_cast<int32_t>(entry.bytes_val));
+            break;
+        }
+        case 4: { // CONSTANT_Float (32 bits IEEE 754)
+            ctx.push(static_cast<int32_t>(entry.bytes_val));
+            break;
+        }
+        case 7: { // CONSTANT_Class (ex.: MinhaClasse.class) -> index1 aponta para CONSTANT_Utf8
+            std::string nome_classe = resolver_cp_string(cp, entry.index1);
+            std::cout << "[" << mnemonico << " #" << cp_index << "] Class: " << nome_classe << "\n";
+            ctx.push(static_cast<int32_t>(cp_index));
+            break;
+        }
+        case 8: { // CONSTANT_String -> index1 aponta para CONSTANT_Utf8
+            std::string texto = resolver_cp_string(cp, entry.index1);
+            std::cout << "[" << mnemonico << " #" << cp_index << "] String: \"" << texto << "\"\n";
+            ctx.push(static_cast<int32_t>(cp_index));
+            break;
+        }
+        case 15: { // CONSTANT_MethodHandle -> ref_kind e index1
+            std::string alvo = resolver_cp_string(cp, entry.index1);
+            std::cout << "[" << mnemonico << " #" << cp_index
+                      << "] MethodHandle (ref_kind=" << static_cast<int>(entry.ref_kind)
+                      << "): " << alvo << "\n";
+            ctx.push(static_cast<int32_t>(cp_index));
+            break;
+        }
+        case 16: { // CONSTANT_MethodType -> index1 aponta para descritor UTF-8
+            std::string descritor = resolver_cp_string(cp, entry.index1);
+            std::cout << "[" << mnemonico << " #" << cp_index << "] MethodType: " << descritor << "\n";
+            ctx.push(static_cast<int32_t>(cp_index));
+            break;
+        }
+        default: {
+            std::cerr << "Erro: tag nao suportada em " << mnemonico
+                      << " (#" << cp_index << ", tag=" << static_cast<int>(entry.tag) << ")\n";
+            ctx.erro_execucao = true;
+            break;
+        }
+    }
 }
-// Byte 0x13: 
+
+// Byte 0x12: ldc - Carrega constante de 1 slot do Constant Pool (indice de 1 byte)
 template <typename Context>
-inline void ldc_w(Context& ctx){
-    uint8_t b1 = ctx.code[ctx.pc];
-    ctx.pc++;
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void ldc(Context& ctx) {
+    if (ctx.pc >= ctx.code.size()) {
+        std::cerr << "Erro: ldc sem operando no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint8_t b1 = ctx.code[ctx.pc++];
+    ldc_resolver_1slot(ctx, static_cast<uint16_t>(b1), "ldc");
 }
-// Byte 0x14: 
+
+// Byte 0x13: ldc_w - Carrega constante de 1 slot do Constant Pool (indice de 2 bytes)
 template <typename Context>
-inline void ldc2_w(Context& ctx){
-    uint8_t b1 = ctx.code[ctx.pc];
-    ctx.pc++;
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void ldc_w(Context& ctx) {
+    if (ctx.pc + 1 >= ctx.code.size()) {
+        std::cerr << "Erro: ldc_w sem operandos suficientes no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t high = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t low  = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t cp_index = static_cast<uint16_t>((high << 8) | low);
+    ldc_resolver_1slot(ctx, cp_index, "ldc_w");
 }
+
+// Byte 0x14: ldc2_w - Carrega constante de 64 bits (2 slots: long ou double) do Constant Pool
+template <typename Context>
+inline void ldc2_w(Context& ctx) {
+    if (ctx.pc + 1 >= ctx.code.size()) {
+        std::cerr << "Erro: ldc2_w sem operandos suficientes no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t high_idx = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t low_idx  = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t cp_index = static_cast<uint16_t>((high_idx << 8) | low_idx);
+
+    if (!ctx.classe || cp_index == 0 || cp_index >= ctx.classe->constant_pool.size()) {
+        std::cerr << "Erro: indice invalido no Constant Pool em ldc2_w (#" << cp_index
+                  << ") no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    const auto& entry = ctx.classe->constant_pool[cp_index];
+
+    if (entry.tag == 5 || entry.tag == 6) { // CONSTANT_Long (5) ou CONSTANT_Double (6)
+        uint64_t val = entry.long_bytes_val;
+        int32_t high_word = static_cast<int32_t>(static_cast<uint32_t>(val >> 32));
+        int32_t low_word  = static_cast<int32_t>(static_cast<uint32_t>(val & 0xFFFFFFFFULL));
+        ctx.push(high_word);
+        ctx.push(low_word);
+    } else {
+        std::cerr << "Erro: tag invalida em ldc2_w (#" << cp_index
+                  << ", tag=" << static_cast<int>(entry.tag)
+                  << "; esperado 5 para long ou 6 para double)\n";
+        ctx.erro_execucao = true;
+    }
+}
+
 // Byte 0x15: pega Variável Local e coloca na pilha
 template <typename Context>
 inline void iload(Context& ctx){
@@ -287,46 +387,126 @@ template <typename Context>
 inline void aload_3(Context& ctx) {
     ctx.push(ctx.get_local(3));
 }
-// Byte 0x2E: 
+
 template <typename Context>
-inline void iaload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline bool preparar_array_load(Context& ctx, const char* mnemonico, int32_t& arrayref, int32_t& index) {
+    if (ctx.size() < 2) {
+        std::cerr << "Erro: pilha insuficiente para " << mnemonico << " no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    index = ctx.pop();
+    arrayref = ctx.pop();
+    if (ctx.erro_execucao) return false;
+
+    if (arrayref == 0) {
+        std::cerr << "Erro: NullPointerException em " << mnemonico << " no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    if (index < 0) {
+        std::cerr << "Erro: ArrayIndexOutOfBoundsException em " << mnemonico
+                  << " (index=" << index << ") no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    return true;
 }
-// Byte 0x2F: 
+
+// Byte 0x2E: iaload - Carrega elemento int (32 bits, 1 slot) de array
 template <typename Context>
-inline void laload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void iaload(Context& ctx) {
+    int32_t arrayref = 0, index = 0;
+    if (!preparar_array_load(ctx, "iaload", arrayref, index)) return;
+
+    // TODO: substituir pelo valor real em heap[arrayref][index] quando o Heap existir
+    int32_t elem = INT32_C(0);
+    ctx.push(elem);
 }
-// Byte 0x30: 
+
+// Byte 0x2F: laload - Carrega elemento long (64 bits, 2 slots: high depois low) de array
 template <typename Context>
-inline void faload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void laload(Context& ctx) {
+    int32_t arrayref = 0, index = 0;
+    if (!preparar_array_load(ctx, "laload", arrayref, index)) return;
+
+    // TODO: substituir pelo long real em heap[arrayref][index] quando o Heap existir
+    int64_t elem = INT64_C(0);
+    uint64_t raw = static_cast<uint64_t>(elem);
+    ctx.push(static_cast<int32_t>(static_cast<uint32_t>(raw >> 32)));
+    ctx.push(static_cast<int32_t>(static_cast<uint32_t>(raw & 0xFFFFFFFFULL)));
 }
-// Byte 0x31: 
+
+// Byte 0x30: faload - Carrega elemento float (32 bits IEEE 754, 1 slot) de array
 template <typename Context>
-inline void daload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void faload(Context& ctx) {
+    int32_t arrayref = 0, index = 0;
+    if (!preparar_array_load(ctx, "faload", arrayref, index)) return;
+
+    // TODO: substituir pelo float real em heap[arrayref][index] quando o Heap existir
+    uint32_t raw = UINT32_C(0);
+    ctx.push(static_cast<int32_t>(raw));
 }
-// Byte 0x32: 
+
+// Byte 0x31: daload - Carrega elemento double (64 bits IEEE 754, 2 slots: high depois low) de array
 template <typename Context>
-inline void aaload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void daload(Context& ctx) {
+    int32_t arrayref = 0, index = 0;
+    if (!preparar_array_load(ctx, "daload", arrayref, index)) return;
+
+    // TODO: substituir pelo double real em heap[arrayref][index] quando o Heap existir
+    uint64_t raw = UINT64_C(0);
+    ctx.push(static_cast<int32_t>(static_cast<uint32_t>(raw >> 32)));
+    ctx.push(static_cast<int32_t>(static_cast<uint32_t>(raw & 0xFFFFFFFFULL)));
 }
-// Byte 0x33: 
+
+// Byte 0x32: aaload - Carrega referencia de objeto (1 slot) de array de referencias
 template <typename Context>
-inline void baload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void aaload(Context& ctx) {
+    int32_t arrayref = 0, index = 0;
+    if (!preparar_array_load(ctx, "aaload", arrayref, index)) return;
+
+    // TODO: substituir pela referencia real em heap[arrayref][index] quando o Heap existir
+    int32_t ref_elem = INT32_C(0);
+    ctx.push(ref_elem);
 }
-// Byte 0x34: 
+
+// Byte 0x33: baload - Carrega byte (com sinal) ou boolean de array e estende para int (1 slot)
 template <typename Context>
-inline void caload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void baload(Context& ctx) {
+    int32_t arrayref = 0, index = 0;
+    if (!preparar_array_load(ctx, "baload", arrayref, index)) return;
+
+    // TODO: substituir pelo byte/boolean real em heap[arrayref][index] quando o Heap existir
+    int8_t raw_byte = 0;
+    ctx.push(static_cast<int32_t>(raw_byte));
 }
-// Byte 0x35: 
+
+// Byte 0x34: caload - Carrega char (sem sinal 16 bits) de array e estende para int (1 slot)
 template <typename Context>
-inline void saload(Context& ctx){
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+inline void caload(Context& ctx) {
+    int32_t arrayref = 0, index = 0;
+    if (!preparar_array_load(ctx, "caload", arrayref, index)) return;
+
+    // TODO: substituir pelo char real em heap[arrayref][index] quando o Heap existir
+    uint16_t raw_char = 0;
+    ctx.push(static_cast<int32_t>(raw_char));
 }
+
+// Byte 0x35: saload - Carrega short (com sinal 16 bits) de array e estende para int (1 slot)
+template <typename Context>
+inline void saload(Context& ctx) {
+    int32_t arrayref = 0, index = 0;
+    if (!preparar_array_load(ctx, "saload", arrayref, index)) return;
+
+    // TODO: substituir pelo short real em heap[arrayref][index] quando o Heap existir
+    int16_t raw_short = 0;
+    ctx.push(static_cast<int32_t>(raw_short));
+}
+
 // Byte 0x36: desempilha int e guarda na Variável Local[b1]
 template <typename Context>
 inline void istore(Context& ctx) {
@@ -474,46 +654,162 @@ template <typename Context>
 inline void astore_3(Context& ctx) {
     ctx.set_local(3, ctx.pop());
 }
-// Byte 0x4F: grava int em array no Heap
+
+template <typename Context>
+inline bool preparar_array_store_1slot(Context& ctx,
+                                       const char* mnemonico,
+                                       int32_t& arrayref,
+                                       int32_t& index,
+                                       int32_t& value) {
+    if (ctx.size() < 3) {
+        std::cerr << "Erro: pilha insuficiente para " << mnemonico << " no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    value = ctx.pop();
+    index = ctx.pop();
+    arrayref = ctx.pop();
+    if (ctx.erro_execucao) return false;
+
+    if (arrayref == 0) {
+        std::cerr << "Erro: NullPointerException em " << mnemonico << " no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    if (index < 0) {
+        std::cerr << "Erro: ArrayIndexOutOfBoundsException em " << mnemonico
+                  << " (index=" << index << ") no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    return true;
+}
+
+template <typename Context>
+inline bool preparar_array_store_2slots(Context& ctx,
+                                        const char* mnemonico,
+                                        int32_t& arrayref,
+                                        int32_t& index,
+                                        uint64_t& raw_64) {
+    if (ctx.size() < 4) {
+        std::cerr << "Erro: pilha insuficiente para " << mnemonico << " no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    int32_t low_word = ctx.pop();
+    int32_t high_word = ctx.pop();
+    index = ctx.pop();
+    arrayref = ctx.pop();
+    if (ctx.erro_execucao) return false;
+
+    if (arrayref == 0) {
+        std::cerr << "Erro: NullPointerException em " << mnemonico << " no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    if (index < 0) {
+        std::cerr << "Erro: ArrayIndexOutOfBoundsException em " << mnemonico
+                  << " (index=" << index << ") no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    raw_64 = (static_cast<uint64_t>(static_cast<uint32_t>(high_word)) << 32) |
+             static_cast<uint64_t>(static_cast<uint32_t>(low_word));
+    return true;
+}
+
+// Byte 0x4F: iastore - Grava int (32 bits) em array no Heap
 template <typename Context>
 inline void iastore(Context& ctx) {
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+    int32_t arrayref = 0, index = 0, value = 0;
+    if (!preparar_array_store_1slot(ctx, "iastore", arrayref, index, value)) return;
+
+    // TODO: gravar int32_t value em heap[arrayref][index] quando o Heap existir
+    (void)value;
 }
-// Byte 0x50: grava long em array no Heap
+
+// Byte 0x50: lastore - Grava long (64 bits, 2 slots) em array no Heap
 template <typename Context>
 inline void lastore(Context& ctx) {
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+    int32_t arrayref = 0, index = 0;
+    uint64_t raw_64 = 0;
+    if (!preparar_array_store_2slots(ctx, "lastore", arrayref, index, raw_64)) return;
+
+    // TODO: gravar static_cast<int64_t>(raw_64) em heap[arrayref][index] quando o Heap existir
+    (void)raw_64;
 }
-// Byte 0x51: grava float em array no Heap
+
+// Byte 0x51: fastore - Grava float (32 bits IEEE 754) em array no Heap
 template <typename Context>
 inline void fastore(Context& ctx) {
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+    int32_t arrayref = 0, index = 0, value = 0;
+    if (!preparar_array_store_1slot(ctx, "fastore", arrayref, index, value)) return;
+
+    // TODO: gravar uint32_t bits (static_cast<uint32_t>(value)) em heap[arrayref][index]
+    (void)value;
 }
-// Byte 0x52: grava double em array no Heap
+
+// Byte 0x52: dastore - Grava double (64 bits IEEE 754, 2 slots) em array no Heap
 template <typename Context>
 inline void dastore(Context& ctx) {
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+    int32_t arrayref = 0, index = 0;
+    uint64_t raw_64 = 0;
+    if (!preparar_array_store_2slots(ctx, "dastore", arrayref, index, raw_64)) return;
+
+    // TODO: gravar uint64_t bits raw_64 em heap[arrayref][index] quando o Heap existir
+    (void)raw_64;
 }
-// Byte 0x53: grava referência em array no Heap
+
+// Byte 0x53: aastore - Grava referencia de objeto em array no Heap
 template <typename Context>
 inline void aastore(Context& ctx) {
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+    int32_t arrayref = 0, index = 0, ref_val = 0;
+    if (!preparar_array_store_1slot(ctx, "aastore", arrayref, index, ref_val)) return;
+
+    // TODO: gravar referencia ref_val em heap[arrayref][index] (e validar ArrayStoreException se aplicavel)
+    (void)ref_val;
 }
-// Byte 0x54: grava byte/boolean em array no Heap
+
+// Byte 0x54: bastore - Grava byte (8 bits com sinal) ou boolean em array no Heap
 template <typename Context>
 inline void bastore(Context& ctx) {
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+    int32_t arrayref = 0, index = 0, value = 0;
+    if (!preparar_array_store_1slot(ctx, "bastore", arrayref, index, value)) return;
+
+    // Na JVM, bastore trunca o int para byte (8 bits) ou boolean (bit 0)
+    int8_t byte_val = static_cast<int8_t>(value & 0xFF);
+    // TODO: gravar byte_val em heap[arrayref][index] quando o Heap existir
+    (void)byte_val;
 }
-// Byte 0x55: grava char em array no Heap
+
+// Byte 0x55: castore - Grava char (16 bits sem sinal) em array no Heap
 template <typename Context>
 inline void castore(Context& ctx) {
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+    int32_t arrayref = 0, index = 0, value = 0;
+    if (!preparar_array_store_1slot(ctx, "castore", arrayref, index, value)) return;
+
+    uint16_t char_val = static_cast<uint16_t>(value & 0xFFFF);
+    // TODO: gravar char_val em heap[arrayref][index] quando o Heap existir
+    (void)char_val;
 }
-// Byte 0x56: grava short em array no Heap
+
+// Byte 0x56: sastore - Grava short (16 bits com sinal) em array no Heap
 template <typename Context>
 inline void sastore(Context& ctx) {
-    std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+    int32_t arrayref = 0, index = 0, value = 0;
+    if (!preparar_array_store_1slot(ctx, "sastore", arrayref, index, value)) return;
+
+    int16_t short_val = static_cast<int16_t>(value & 0xFFFF);
+    // TODO: gravar short_val em heap[arrayref][index] quando o Heap existir
+    (void)short_val;
 }
+
 // Byte 0x57: desempilha 1 slot do topo
 template <typename Context>
 inline void pop(Context& ctx) {
@@ -802,7 +1098,9 @@ inline void idiv(Context& ctx) {
         int32_t val2 = ctx.top(); ctx.pop();
         if (val1 == 0) {
             // Lança ArithmeticException na JVM
-            std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+            std::cerr << "Erro: ArithmeticException (/ by zero) em idiv no PC=" << ctx.pc << "\n";
+            ctx.erro_execucao = true;
+            return;
         }
         ctx.push(val2 / val1);
     }
@@ -821,7 +1119,9 @@ inline void ldiv_JVM(Context& ctx) {
 
         if (val1 == 0) {
             // Lança ArithmeticException
-            std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+            std::cerr << "Erro: ArithmeticException (/ by zero) em ldiv no PC=" << ctx.pc << "\n";
+            ctx.erro_execucao = true;
+            return;
         }
 
         int64_t result = val2 / val1;
@@ -874,7 +1174,9 @@ inline void irem(Context& ctx) {
         int32_t val2 = ctx.top(); ctx.pop();
         if (val1 == 0) {
             // Lança ArithmeticException
-            std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+            std::cerr << "Erro: ArithmeticException (/ by zero) em idiv no PC=" << ctx.pc << "\n";
+            ctx.erro_execucao = true;
+            return;
         }
         ctx.push(val2 % val1);
     }
@@ -893,7 +1195,9 @@ inline void lrem(Context& ctx) {
 
         if (val1 == 0) {
             // Lança ArithmeticException
-            std::cout << "AINDA A SER IMPLEMENTADO" << ctx.pc << std::endl;
+            std::cerr << "Erro: ArithmeticException (/ by zero) em ldiv no PC=" << ctx.pc << "\n";
+            ctx.erro_execucao = true;
+            return;
         }
 
         int64_t result = val2 % val1;
@@ -1677,124 +1981,1309 @@ inline void goto_JVM(Context& ctx) {
 
     ctx.pc = branch_pc + offset;
 }
+inline int16_t ler_i16_be(const std::vector<uint8_t>& code, size_t pos) {
+    uint16_t raw = static_cast<uint16_t>(
+        (static_cast<uint16_t>(code[pos]) << 8) |
+         static_cast<uint16_t>(code[pos + 1])
+    );
+    return static_cast<int16_t>(raw);
+}
 
+inline int32_t ler_i32_be(const std::vector<uint8_t>& code, size_t pos) {
+    uint32_t raw = (static_cast<uint32_t>(code[pos])     << 24) |
+                   (static_cast<uint32_t>(code[pos + 1]) << 16) |
+                   (static_cast<uint32_t>(code[pos + 2]) << 8)  |
+                    static_cast<uint32_t>(code[pos + 3]);
+    return static_cast<int32_t>(raw);
+}
 
-
-
-
-/*=========EXEMPLOS A SEREM APAGADOS DEPOIS =========*/
-
-// Byte 0x03: Remove os dois valores do topo, soma em 32 bits e empilha o resultado
-template <typename Context>
-inline void op_03(Context& ctx) {
-    if (ctx.size() >= 2) {
-        int32_t val1 = ctx.top();
-        ctx.pop();
-
-        int32_t val2 = ctx.top();
-        ctx.pop();
-
-        ctx.push(val2 + val1);
+inline bool aplicar_salto_relativo(uint32_t base_pc, int32_t offset, size_t code_size, uint32_t& out_pc) {
+    int64_t alvo = static_cast<int64_t>(base_pc) + static_cast<int64_t>(offset);
+    if (alvo < 0 || static_cast<uint64_t>(alvo) >= code_size) {
+        return false;
     }
+    out_pc = static_cast<uint32_t>(alvo);
+    return true;
 }
-
-// Byte 0x04: Desempilha o topo e salva na Variável Local [0]
+// Byte 0xA8: jsr - Jump subroutine (empilha endereco de retorno e salta para offset de 16 bits)
 template <typename Context>
-inline void LOCAL(Context& ctx) {
-    if (!ctx.empty()) {
-        ctx.set_local(0, ctx.top());
-        ctx.pop();
-    }
-}
+inline void jsr(Context& ctx) {
+    // base_pc e o endereco do proprio opcode 0xA8 (ja que o loop incrementa pc apos ler o opcode)
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
 
-// Byte 0x05: Carrega da Variável Local [0] e empilha no topo
-template <typename Context>
-inline void op_05_load0(Context& ctx) {
-    ctx.push(ctx.get_local(0));
-}
-
-// Byte 0xFF: NÃO FAZ WBGObnglrbLN6544684&*%$$$ SINBORAUM
-template <typename Context>
-inline void TMP(Context& ctx){
-    // Imprime o valor do topo da pilha na tela
-    std::cout << "Topo da pilha: " << std::hex << ctx.top() << std::dec << std::endl;
-    ctx.pop();
-}
-
-// Byte 0xB2: getstatic - Resolve campo estático no Constant Pool e empilha referência/valor
-template <typename Context>
-inline void getstatic_JVM(Context& ctx) {
-    if (ctx.pc + 1 >= ctx.code.size()) {
-        std::cerr << "Erro: getstatic sem operandos suficientes no PC=" << ctx.pc << "\n";
+    if (static_cast<size_t>(base_pc) + 2 >= ctx.code.size()) {
+        std::cerr << "Erro: jsr sem operandos suficientes no PC=" << base_pc << "\n";
         ctx.erro_execucao = true;
         return;
     }
 
-    uint16_t high = ctx.code[ctx.pc++];
-    uint16_t low  = ctx.code[ctx.pc++];
-    uint16_t cp_index = static_cast<uint16_t>((high << 8) | low);
+    int16_t branch = ler_i16_be(ctx.code, static_cast<size_t>(base_pc) + 1);
+    uint32_t retorno_pc = base_pc + 3;
+    ctx.push(static_cast<int32_t>(retorno_pc));
+    if (ctx.erro_execucao) return;
 
-    if (!ctx.classe || cp_index == 0 || cp_index >= ctx.classe->constant_pool.size()) {
-        std::cerr << "Erro: indice invalido no Constant Pool em getstatic (#" << cp_index << ")\n";
+    uint32_t novo_pc = 0;
+    if (!aplicar_salto_relativo(base_pc, static_cast<int32_t>(branch), ctx.code.size(), novo_pc)) {
+        std::cerr << "Erro: salto invalido em jsr no PC=" << base_pc << "\n";
         ctx.erro_execucao = true;
         return;
     }
+
+    ctx.pc = novo_pc;
+}
+// Byte 0xA9: ret - Retorna de sub-rotina usando endereco salvo na variavel local [index]
+template <typename Context>
+inline void ret(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+
+    if (ctx.pc >= ctx.code.size()) {
+        std::cerr << "Erro: ret sem operando de indice no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint8_t local_idx = ctx.code[ctx.pc];
+    if (static_cast<size_t>(local_idx) >= ctx.locais.size()) {
+        std::cerr << "Erro: indice de variavel local invalido em ret: "
+                  << static_cast<int>(local_idx) << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t addr = ctx.get_local(local_idx);
+    if (ctx.erro_execucao || addr < 0 || static_cast<size_t>(addr) >= ctx.code.size()) {
+        std::cerr << "Erro: endereco de retorno invalido em ret (" << addr << ")\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    ctx.pc = static_cast<uint32_t>(addr);
+}
+// Byte 0xAA: tableswitch - Switch indexado por faixa [low, high] com alinhamento de 4 bytes
+template <typename Context>
+inline void tableswitch(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em tableswitch no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t index = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    // Padding: avanca ate o proximo endereco multiplo de 4 a partir de base_pc + 1
+    size_t cursor = (static_cast<size_t>(base_pc) + 4u) & ~static_cast<size_t>(3u);
+    if (cursor + 12 > ctx.code.size()) {
+        std::cerr << "Erro: tableswitch truncado no cabecalho no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t default_offset = ler_i32_be(ctx.code, cursor);
+    int32_t low            = ler_i32_be(ctx.code, cursor + 4);
+    int32_t high           = ler_i32_be(ctx.code, cursor + 8);
+    cursor += 12;
+
+    if (high < low) {
+        std::cerr << "Erro: tableswitch com high (" << high << ") < low (" << low << ")\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int64_t count = static_cast<int64_t>(high) - static_cast<int64_t>(low) + 1LL;
+    size_t table_bytes = static_cast<size_t>(count) * 4u;
+    if (cursor + table_bytes > ctx.code.size()) {
+        std::cerr << "Erro: tableswitch truncado na tabela de offsets no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t chosen_offset = default_offset;
+    if (static_cast<int64_t>(index) >= static_cast<int64_t>(low) &&
+        static_cast<int64_t>(index) <= static_cast<int64_t>(high)) {
+        size_t pos_idx = static_cast<size_t>(static_cast<int64_t>(index) - static_cast<int64_t>(low));
+        chosen_offset = ler_i32_be(ctx.code, cursor + pos_idx * 4u);
+    }
+
+    uint32_t novo_pc = 0;
+    if (!aplicar_salto_relativo(base_pc, chosen_offset, ctx.code.size(), novo_pc)) {
+        std::cerr << "Erro: salto invalido em tableswitch no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    ctx.pc = novo_pc;
+}
+// Byte 0xAB: lookupswitch - Switch por pares (match, offset) com alinhamento de 4 bytes
+template <typename Context>
+inline void lookupswitch(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em lookupswitch no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t key = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    size_t cursor = (static_cast<size_t>(base_pc) + 4u) & ~static_cast<size_t>(3u);
+    if (cursor + 8 > ctx.code.size()) {
+        std::cerr << "Erro: lookupswitch truncado no cabecalho no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t default_offset = ler_i32_be(ctx.code, cursor);
+    int32_t npairs         = ler_i32_be(ctx.code, cursor + 4);
+    cursor += 8;
+
+    if (npairs < 0) {
+        std::cerr << "Erro: npairs negativo em lookupswitch (" << npairs << ")\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    size_t pairs_bytes = static_cast<size_t>(npairs) * 8u;
+    if (cursor + pairs_bytes > ctx.code.size()) {
+        std::cerr << "Erro: lookupswitch truncado na tabela de pares no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t chosen_offset = default_offset;
+    for (int32_t i = 0; i < npairs; ++i) {
+        size_t pair_pos = cursor + static_cast<size_t>(i) * 8u;
+        int32_t match   = ler_i32_be(ctx.code, pair_pos);
+        int32_t offset  = ler_i32_be(ctx.code, pair_pos + 4u);
+        if (match == key) {
+            chosen_offset = offset;
+            break;
+        }
+    }
+
+    uint32_t novo_pc = 0;
+    if (!aplicar_salto_relativo(base_pc, chosen_offset, ctx.code.size(), novo_pc)) {
+        std::cerr << "Erro: salto invalido em lookupswitch no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    ctx.pc = novo_pc;
+}
+// Auxiliar interno para armazenar/expor o retorno do frame atual sem poluir a pilha ativa
+template <typename Context>
+inline void registrar_retorno_1slot(Context& ctx, const char* mnemonico, int32_t val) {
+    (void)mnemonico;
+    (void)val;
+    // Se o seu Context tiver um campo de retorno (ex.: ctx.retorno_pendente / ctx.frame_encerrado),
+    // você pode salvá-lo aqui e marcar ctx.frame_encerrado = true.
+}
+template <typename Context>
+inline void registrar_retorno_2slots(Context& ctx, const char* mnemonico, int32_t high_word, int32_t low_word) {
+    (void)mnemonico;
+    (void)high_word;
+    (void)low_word;
+}
+// Byte 0xAC: ireturn - Retorna um int (32 bits, 1 slot) de um metodo
+template <typename Context>
+inline void ireturn(Context& ctx) {
+    if (ctx.size() < 1) {
+        std::cerr << "Erro: pilha vazia em ireturn no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t val = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    registrar_retorno_1slot(ctx, "ireturn", val);
+    ctx.pc = static_cast<uint32_t>(ctx.code.size());
+}
+// Byte 0xAD: lreturn - Retorna um long (64 bits, 2 slots: high no topo-1, low no topo)
+template <typename Context>
+inline void lreturn(Context& ctx) {
+    if (ctx.size() < 2) {
+        std::cerr << "Erro: pilha insuficiente para lreturn no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t low_word  = ctx.pop();
+    int32_t high_word = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    registrar_retorno_2slots(ctx, "lreturn", high_word, low_word);
+    ctx.pc = static_cast<uint32_t>(ctx.code.size());
+}
+// Byte 0xAE: freturn - Retorna um float (32 bits IEEE 754, 1 slot) de um metodo
+template <typename Context>
+inline void freturn(Context& ctx) {
+    if (ctx.size() < 1) {
+        std::cerr << "Erro: pilha vazia em freturn no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t raw_float = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    registrar_retorno_1slot(ctx, "freturn", raw_float);
+    ctx.pc = static_cast<uint32_t>(ctx.code.size());
+}
+// Byte 0xAF: dreturn - Retorna um double (64 bits IEEE 754, 2 slots: high no topo-1, low no topo)
+template <typename Context>
+inline void dreturn(Context& ctx) {
+    if (ctx.size() < 2) {
+        std::cerr << "Erro: pilha insuficiente para dreturn no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t low_word  = ctx.pop();
+    int32_t high_word = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    registrar_retorno_2slots(ctx, "dreturn", high_word, low_word);
+    ctx.pc = static_cast<uint32_t>(ctx.code.size());
+}
+// Byte 0xB0: areturn - Retorna uma referencia de objeto/array (32 bits, 1 slot) de um metodo
+template <typename Context>
+inline void areturn(Context& ctx) {
+    if (ctx.size() < 1) {
+        std::cerr << "Erro: pilha vazia em areturn no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t obj_ref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    registrar_retorno_1slot(ctx, "areturn", obj_ref);
+    ctx.pc = static_cast<uint32_t>(ctx.code.size());
+}
+// Byte 0xB1: return - Retorna de metodo void (0 slots)
+template <typename Context>
+inline void return_void(Context& ctx) {
+    std::cout << "Instrucao 'return' (0xB1) executada. Encerrando frame.\n";
+    ctx.pc = static_cast<uint32_t>(ctx.code.size());
+}
+inline bool ler_u16_be_seguro(const std::vector<uint8_t>& code,
+                               size_t& pos,
+                               const char* mnemonico,
+                               bool& erro) {
+    if (pos + 1 >= code.size()) {
+        std::cerr << "Erro: bytes insuficientes para indice em " << mnemonico
+                  << " no PC=" << pos << "\n";
+        erro = true;
+        return false;
+    }
+    return true;
+}
+
+template <typename Context>
+inline bool extrair_ref_cp(Context& ctx,
+                           const char* mnemonico,
+                           uint16_t& cp_index,
+                           std::string& classe_nome,
+                           std::string& nome_membro,
+                           std::string& descritor) {
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size() || !ctx.classe) {
+        std::cerr << "Erro: contexto invalido ou operandos faltando em " << mnemonico
+                  << " no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
+    uint16_t high = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t low  = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    cp_index = static_cast<uint16_t>((high << 8) | low);
 
     const auto& cp = ctx.classe->constant_pool;
+    if (cp_index == 0 || cp_index >= cp.size()) {
+        std::cerr << "Erro: indice #" << cp_index << " fora do Constant Pool em "
+                  << mnemonico << "\n";
+        ctx.erro_execucao = true;
+        return false;
+    }
+
     const auto& entry = cp[cp_index];
 
-    // Em um .class, getstatic aponta para CONSTANT_Fieldref (tag 9):
-    // index1 -> CONSTANT_Class (tag 7), index2 -> CONSTANT_NameAndType (tag 12)
-    std::string nome_classe = resolver_cp_string(cp, entry.index1);
-    std::string nome_e_desc = resolver_cp_string(cp, entry.index2);
+    // CONSTANT_InvokeDynamic (tag 18): index1 = bootstrap_method_attr_index, index2 = NameAndType
+    if (entry.tag == 18) {
+        classe_nome = "<bootstrap#" + std::to_string(entry.index1) + ">";
+        if (entry.index2 < cp.size() && cp[entry.index2].tag == 12) {
+            nome_membro = resolver_cp_string(cp, cp[entry.index2].index1);
+            descritor   = resolver_cp_string(cp, cp[entry.index2].index2);
+        } else {
+            nome_membro = resolver_cp_string(cp, entry.index2);
+            descritor.clear();
+        }
+        return true;
+    }
 
-    std::cout << "[getstatic #" << cp_index << "] " << nome_classe << "." << nome_e_desc << "\n";
+    classe_nome = resolver_cp_string(cp, entry.index1);
+    if (entry.index2 < cp.size() && cp[entry.index2].tag == 12) {
+        nome_membro = resolver_cp_string(cp, cp[entry.index2].index1);
+        descritor   = resolver_cp_string(cp, cp[entry.index2].index2);
+    } else {
+        std::string combinado = resolver_cp_string(cp, entry.index2);
+        auto pos = combinado.find(':');
+        if (pos != std::string::npos) {
+            nome_membro = combinado.substr(0, pos);
+            descritor   = combinado.substr(pos + 1);
+        } else {
+            nome_membro = combinado;
+            descritor.clear();
+        }
+    }
 
-    // Como o simulador ainda não tem Heap/objetos reais de PrintStream,
-    // empilhamos um placeholder (ex.: 1) para que a pilha não fique vazia nos próximos bytecodes.
-    ctx.push(INT32_C(0XFFFF));
+    return true;
 }
-// Byte 0xB6: getstatic - Resolve campo estático no Constant Pool e empilha referência/valor
+
+inline bool descritor_e_64bits(const std::string& descritor) {
+    auto pos = descritor.find(')');
+    std::string ret = (pos != std::string::npos && pos + 1 < descritor.size())
+                          ? descritor.substr(pos + 1)
+                          : descritor;
+    return (!ret.empty() && (ret[0] == 'J' || ret[0] == 'D'));
+}
+
+inline bool descritor_e_void(const std::string& descritor) {
+    auto pos = descritor.find(')');
+    std::string ret = (pos != std::string::npos && pos + 1 < descritor.size())
+                          ? descritor.substr(pos + 1)
+                          : descritor;
+    return (!ret.empty() && ret[0] == 'V');
+}
+
+// Conta slots de argumentos a partir do descritor "(...)" (ignora o tipo de retorno apos ')')
+inline int contar_slots_argumentos(const std::string& descritor) {
+    int slots = 0;
+    size_t i = 0;
+    if (!descritor.empty() && descritor[0] == '(') {
+        i = 1;
+    }
+    while (i < descritor.size() && descritor[i] != ')') {
+        char c = descritor[i];
+        if (c == 'J' || c == 'D') {
+            slots += 2;
+            ++i;
+        } else if (c == 'L') {
+            slots += 1;
+            auto ponto_virgula = descritor.find(';', i + 1);
+            if (ponto_virgula == std::string::npos) break;
+            i = ponto_virgula + 1;
+        } else if (c == '[') {
+            slots += 1;
+            ++i;
+            while (i < descritor.size() && descritor[i] == '[') ++i;
+            if (i < descritor.size() && descritor[i] == 'L') {
+                auto ponto_virgula = descritor.find(';', i + 1);
+                if (ponto_virgula == std::string::npos) break;
+                i = ponto_virgula + 1;
+            } else if (i < descritor.size()) {
+                ++i;
+            }
+        } else {
+            slots += 1;
+            ++i;
+        }
+    }
+    return slots;
+}
+
 template <typename Context>
-inline void invokevirtual_JVM(Context& ctx) {
-    if (ctx.pc + 1 >= ctx.code.size() || !ctx.classe) {
+inline void empilhar_retorno_simbolico(Context& ctx, const std::string& descritor, int32_t ref_simbolica) {
+    if (descritor_e_void(descritor)) {
+        return;
+    }
+    if (descritor_e_64bits(descritor)) {
+        ctx.push(INT32_C(0)); // high_word placeholder
+        ctx.push(INT32_C(0)); // low_word placeholder
+    } else {
+        ctx.push(ref_simbolica);
+    }
+}
+
+// Byte 0xB2: getstatic - Carrega campo estatico na pilha
+template <typename Context>
+inline void getstatic_JVM(Context& ctx) {
+    uint16_t idx = 0;
+    std::string classe_nome, nome_campo, descritor;
+    if (!extrair_ref_cp(ctx, "getstatic", idx, classe_nome, nome_campo, descritor)) return;
+
+    std::cout << "[getstatic #" << idx << "] " << classe_nome << "." << nome_campo
+              << (descritor.empty() ? "" : (":" + descritor)) << "\n";
+
+    // Referencia simbolica padrao (ex.: System.out ou campo estatico de 1/2 slots)
+    empilhar_retorno_simbolico(ctx, descritor.empty() ? "L" : descritor, INT32_C(-1));
+}
+
+// Byte 0xB3: putstatic - Grava topo da pilha em campo estatico
+template <typename Context>
+inline void putstatic_JVM(Context& ctx) {
+    uint16_t idx = 0;
+    std::string classe_nome, nome_campo, descritor;
+    if (!extrair_ref_cp(ctx, "putstatic", idx, classe_nome, nome_campo, descritor)) return;
+
+    int slots = descritor_e_64bits(descritor) ? 2 : 1;
+    if (ctx.size() < slots) {
+        std::cerr << "Erro: pilha insuficiente em putstatic no PC=" << ctx.pc << "\n";
         ctx.erro_execucao = true;
         return;
     }
 
-    uint16_t idx = static_cast<uint16_t>((ctx.code[ctx.pc] << 8) | ctx.code[ctx.pc + 1]);
-    ctx.pc += 2;
+    for (int i = 0; i < slots; ++i) {
+        (void)ctx.pop();
+        if (ctx.erro_execucao) return;
+    }
 
-    const auto& cp = ctx.classe->constant_pool;
-    std::string classe_nome = resolver_cp_string(cp, cp[idx].index1);
-    std::string nome_desc   = resolver_cp_string(cp, cp[idx].index2);
+    std::cout << "[putstatic #" << idx << "] " << classe_nome << "." << nome_campo
+              << (descritor.empty() ? "" : (":" + descritor)) << "\n";
+}
 
-    std::cout << "[invokevirtual #" << idx << "] " << classe_nome << "." << nome_desc << "\n";
+// Byte 0xB4: getfield - Substitui objectref do topo pelo valor do campo de instancia
+template <typename Context>
+inline void getfield_JVM(Context& ctx) {
+    uint16_t idx = 0;
+    std::string classe_nome, nome_campo, descritor;
+    if (!extrair_ref_cp(ctx, "getfield", idx, classe_nome, nome_campo, descritor)) return;
 
-    // Exemplo para print:(I)V ou println:(I)V:
-    // 1. Desempilha o argumento int (topo)
-    int32_t arg_int = ctx.pop();
-    // 2. Desempilha o objeto receptor (ex.: System.out)
+    if (ctx.size() < 1) {
+        std::cerr << "Erro: pilha vazia em getfield no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
     int32_t obj_ref = ctx.pop();
-
     if (ctx.erro_execucao) return;
 
     if (obj_ref == 0) {
-        std::cerr << "Erro: NullPointerException em invokevirtual\n";
+        std::cerr << "Erro: NullPointerException em getfield no PC=" << ctx.pc << "\n";
         ctx.erro_execucao = true;
         return;
     }
 
-    std::cout << "\nSystem.out => ";
-    if (nome_desc.rfind("print:", 0) == 0) {
-        std::cout << arg_int;
-    } else if (nome_desc.rfind("println:", 0) == 0) {
-        std::cout << arg_int << "\n";
-    }
-    std::cout << "\n\n";
+    std::cout << "[getfield #" << idx << "] " << classe_nome << "." << nome_campo
+              << (descritor.empty() ? "" : (":" + descritor)) << "\n";
+
+    empilhar_retorno_simbolico(ctx, descritor.empty() ? "I" : descritor, INT32_C(0));
 }
 
+// Byte 0xB5: putfield - Grava valor em campo de instancia de objectref
+template <typename Context>
+inline void putfield_JVM(Context& ctx) {
+    uint16_t idx = 0;
+    std::string classe_nome, nome_campo, descritor;
+    if (!extrair_ref_cp(ctx, "putfield", idx, classe_nome, nome_campo, descritor)) return;
 
+    int val_slots = descritor_e_64bits(descritor) ? 2 : 1;
+    // Precisa do valor (1 ou 2 slots) + objectref (1 slot)
+    if (ctx.size() < val_slots + 1) {
+        std::cerr << "Erro: pilha insuficiente em putfield no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    for (int i = 0; i < val_slots; ++i) {
+        (void)ctx.pop();
+        if (ctx.erro_execucao) return;
+    }
+
+    int32_t obj_ref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (obj_ref == 0) {
+        std::cerr << "Erro: NullPointerException em putfield no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    std::cout << "[putfield #" << idx << "] " << classe_nome << "." << nome_campo
+              << (descritor.empty() ? "" : (":" + descritor)) << "\n";
+}
+// Auxiliar comum para chamadas com objectref (invokevirtual, invokespecial, invokeinterface)
+template <typename Context>
+inline void executar_chamada_de_instancia(Context& ctx, const char* mnemonico, uint16_t idx,
+                                          const std::string& classe_nome,
+                                          const std::string& nome_metodo,
+                                          const std::string& descritor) {
+    int arg_slots = contar_slots_argumentos(descritor);
+    std::vector<int32_t> args_invertidos;
+    args_invertidos.reserve(static_cast<size_t>(arg_slots));
+
+    if (ctx.size() < arg_slots + 1) {
+        std::cerr << "Erro: pilha insuficiente para argumentos/receptor em " << mnemonico
+                  << " no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    for (int i = 0; i < arg_slots; ++i) {
+        args_invertidos.push_back(ctx.pop());
+        if (ctx.erro_execucao) return;
+    }
+
+    int32_t obj_ref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (obj_ref == 0) {
+        std::cerr << "Erro: NullPointerException em " << mnemonico << " ("
+                  << classe_nome << "." << nome_metodo << descritor << ")\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    std::cout << "[" << mnemonico << " #" << idx << "] "
+              << classe_nome << "." << nome_metodo << descritor << "\n";
+
+    // Caso especial conhecido: PrintStream.print / println com (I)V
+    if (classe_nome == "java/io/PrintStream" && descritor == "(I)V" && !args_invertidos.empty()) {
+        int32_t valor = args_invertidos[0];
+        if (nome_metodo == "println") {
+            std::cout << "System.out => " << valor << "\n";
+        } else if (nome_metodo == "print") {
+            std::cout << "System.out => " << valor << "\n";
+        }
+        return;
+    }
+
+    empilhar_retorno_simbolico(ctx, descritor, INT32_C(0));
+}
+// Byte 0xB6: invokevirtual - Despacho virtual em instancia
+template <typename Context>
+inline void invokevirtual_JVM(Context& ctx) {
+    uint16_t idx = 0;
+    std::string classe_nome, nome_metodo, descritor;
+    if (!extrair_ref_cp(ctx, "invokevirtual", idx, classe_nome, nome_metodo, descritor)) return;
+
+    executar_chamada_de_instancia(ctx, "invokevirtual", idx, classe_nome, nome_metodo, descritor);
+}
+// Byte 0xB7: invokespecial - Construtor (<init>), metodos privados ou super
+template <typename Context>
+inline void invokespecial_JVM(Context& ctx) {
+    uint16_t idx = 0;
+    std::string classe_nome, nome_metodo, descritor;
+    if (!extrair_ref_cp(ctx, "invokespecial", idx, classe_nome, nome_metodo, descritor)) return;
+
+    executar_chamada_de_instancia(ctx, "invokespecial", idx, classe_nome, nome_metodo, descritor);
+}
+// Byte 0xB8: invokestatic - Metodo estatico (nao consome objectref da pilha)
+template <typename Context>
+inline void invokestatic_JVM(Context& ctx) {
+    uint16_t idx = 0;
+    std::string classe_nome, nome_metodo, descritor;
+    if (!extrair_ref_cp(ctx, "invokestatic", idx, classe_nome, nome_metodo, descritor)) return;
+
+    int arg_slots = contar_slots_argumentos(descritor);
+    if (ctx.size() < arg_slots) {
+        std::cerr << "Erro: pilha insuficiente para argumentos em invokestatic no PC="
+                  << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    for (int i = 0; i < arg_slots; ++i) {
+        (void)ctx.pop();
+        if (ctx.erro_execucao) return;
+    }
+
+    std::cout << "[invokestatic #" << idx << "] "
+              << classe_nome << "." << nome_metodo << descritor << "\n";
+
+    empilhar_retorno_simbolico(ctx, descritor, INT32_C(0));
+}
+// Byte 0xB9: invokeinterface - Chamada de metodo de interface (4 bytes de operandos)
+template <typename Context>
+inline void invokeinterface_JVM(Context& ctx) {
+    uint16_t idx = 0;
+    std::string classe_nome, nome_metodo, descritor;
+    if (!extrair_ref_cp(ctx, "invokeinterface", idx, classe_nome, nome_metodo, descritor)) return;
+
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size()) {
+        std::cerr << "Erro: bytes finais ausentes em invokeinterface no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint8_t count = ctx.code[ctx.pc++];
+    uint8_t zero_byte = ctx.code[ctx.pc++];
+    (void)count;
+    if (zero_byte != 0) {
+        std::cerr << "Aviso: byte reservado nao-zero em invokeinterface: "
+                  << static_cast<int>(zero_byte) << "\n";
+    }
+
+    executar_chamada_de_instancia(ctx, "invokeinterface", idx, classe_nome, nome_metodo, descritor);
+}
+// Byte 0xBA: invokedynamic - Call site dinamico (4 bytes de operandos, sem objectref obrigatorio)
+template <typename Context>
+inline void invokedynamic_JVM(Context& ctx) {
+    uint16_t idx = 0;
+    std::string bootstrap_info, nome_metodo, descritor;
+    if (!extrair_ref_cp(ctx, "invokedynamic", idx, bootstrap_info, nome_metodo, descritor)) return;
+
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size()) {
+        std::cerr << "Erro: bytes finais ausentes em invokedynamic no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint8_t b3 = ctx.code[ctx.pc++];
+    uint8_t b4 = ctx.code[ctx.pc++];
+    if (b3 != 0 || b4 != 0) {
+        std::cerr << "Aviso: bytes reservados nao-zero em invokedynamic no PC=" << ctx.pc << "\n";
+    }
+
+    int arg_slots = contar_slots_argumentos(descritor);
+    if (ctx.size() < arg_slots) {
+        std::cerr << "Erro: pilha insuficiente para argumentos em invokedynamic no PC="
+                  << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    for (int i = 0; i < arg_slots; ++i) {
+        (void)ctx.pop();
+        if (ctx.erro_execucao) return;
+    }
+
+    std::cout << "[invokedynamic #" << idx << "] " << bootstrap_info << " -> "
+              << nome_metodo << descritor << "\n";
+
+    empilhar_retorno_simbolico(ctx, descritor, INT32_C(0));
+}
+// Auxiliar interno para gerar uma referencia simbolica nao-nula enquanto o Heap real nao existe
+template <typename Context>
+inline int32_t alocar_ref_simbolica(Context& ctx, uint32_t seed) {
+    (void)ctx;
+    int32_t ref = static_cast<int32_t>((seed & 0x7FFFFFFFu) + 1u);
+    return (ref == 0) ? INT32_C(1) : ref;
+}
+// Byte 0xBB: new - Instancia um objeto de uma classe do Constant Pool (2 bytes de indice)
+// Nao chama <init>; apenas aloca e empilha a referencia do objeto nao inicializado.
+template <typename Context>
+inline void new_obj(Context& ctx) {
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size() || !ctx.classe) {
+        std::cerr << "Erro: contexto invalido ou operandos faltando em new no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t high = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t low  = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t cp_index = static_cast<uint16_t>((high << 8) | low);
+
+    const auto& cp = ctx.classe->constant_pool;
+    if (cp_index == 0 || cp_index >= cp.size()) {
+        std::cerr << "Erro: indice #" << cp_index << " fora do Constant Pool em new\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    const auto& entry = cp[cp_index];
+    if (entry.tag != 7) { // CONSTANT_Class
+        std::cerr << "Erro: entrada #" << cp_index << " em new nao e CONSTANT_Class (tag="
+                  << static_cast<int>(entry.tag) << ")\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    std::string nome_classe = resolver_cp_string(cp, entry.index1);
+    std::cout << "[new #" << cp_index << "] Classe: " << nome_classe << "\n";
+
+    // TODO: substituir pela referencia real alocada no Heap quando o Heap existir
+    ctx.push(alocar_ref_simbolica(ctx, static_cast<uint32_t>(cp_index) * 16u + ctx.pc));
+}
+// Byte 0xBC: newarray - Aloca array de tipo primitivo (1 byte atype + count na pilha)
+template <typename Context>
+inline void newarray(Context& ctx) {
+    if (ctx.pc >= ctx.code.size()) {
+        std::cerr << "Erro: newarray sem operando atype no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint8_t atype = ctx.code[ctx.pc++];
+
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em newarray no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t count = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (count < 0) {
+        std::cerr << "Erro: NegativeArraySizeException em newarray (count=" << count
+                  << ") no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    const char* tipo_nome = "desconhecido";
+    switch (atype) {
+        case 4:  tipo_nome = "boolean"; break; // T_BOOLEAN
+        case 5:  tipo_nome = "char";    break; // T_CHAR
+        case 6:  tipo_nome = "float";   break; // T_FLOAT
+        case 7:  tipo_nome = "double";  break; // T_DOUBLE
+        case 8:  tipo_nome = "byte";    break; // T_BYTE
+        case 9:  tipo_nome = "short";   break; // T_SHORT
+        case 10: tipo_nome = "int";     break; // T_INT
+        case 11: tipo_nome = "long";    break; // T_LONG
+        default:
+            std::cerr << "Erro: atype invalido em newarray (" << static_cast<int>(atype)
+                      << ") no PC=" << ctx.pc << "\n";
+            ctx.erro_execucao = true;
+            return;
+    }
+
+    std::cout << "[newarray] tipo=" << tipo_nome << " (atype=" << static_cast<int>(atype)
+              << "), tamanho=" << count << "\n";
+
+    // TODO: alocar array primitivo de tamanho `count` no Heap e empilhar sua referencia
+    ctx.push(alocar_ref_simbolica(ctx, static_cast<uint32_t>(atype) * 1024u + static_cast<uint32_t>(count)));
+}
+// Byte 0xBD: anewarray - Aloca array de referencias de objetos/arrays (2 bytes de indice + count na pilha)
+template <typename Context>
+inline void anewarray(Context& ctx) {
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size() || !ctx.classe) {
+        std::cerr << "Erro: contexto invalido ou operandos faltando em anewarray no PC="
+                  << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t high = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t low  = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t cp_index = static_cast<uint16_t>((high << 8) | low);
+
+    const auto& cp = ctx.classe->constant_pool;
+    if (cp_index == 0 || cp_index >= cp.size()) {
+        std::cerr << "Erro: indice #" << cp_index << " fora do Constant Pool em anewarray\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em anewarray no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t count = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (count < 0) {
+        std::cerr << "Erro: NegativeArraySizeException em anewarray (count=" << count
+                  << ") no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    std::string nome_elemento = resolver_cp_string(cp, cp[cp_index].index1);
+    std::cout << "[anewarray #" << cp_index << "] elemento=" << nome_elemento
+              << ", tamanho=" << count << "\n";
+
+    // TODO: alocar array de referencias de tamanho `count` no Heap e empilhar sua referencia
+    ctx.push(alocar_ref_simbolica(ctx, static_cast<uint32_t>(cp_index) * 256u + static_cast<uint32_t>(count)));
+}
+// Byte 0xBE: arraylength - Desempilha arrayref e empilha o tamanho do array (int >= 0)
+template <typename Context>
+inline void arraylength(Context& ctx) {
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em arraylength no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t arrayref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (arrayref == 0) {
+        std::cerr << "Erro: NullPointerException em arraylength no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    // TODO: ler o tamanho real do array em heap[arrayref].size() quando o Heap existir
+    int32_t length = INT32_C(0);
+    std::cout << "[arraylength] arrayref=" << arrayref << " -> length=" << length << "\n";
+    ctx.push(length);
+}
+// Byte 0xBF: athrow - Desempilha referencia de excecao e lanca/propaga a excecao
+template <typename Context>
+inline void athrow(Context& ctx) {
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em athrow no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t exc_ref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (exc_ref == 0) {
+        std::cerr << "Erro: NullPointerException lancada por athrow (referencia nula) no PC="
+                  << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    // TODO: quando houver exception_table no metodo, procurar handler compativel;
+    // se nao houver (ou ainda sem tabela de excecoes), limpa a pilha e encerra com erro.
+    while (!ctx.empty() && !ctx.erro_execucao) {
+        (void)ctx.pop();
+    }
+    ctx.push(exc_ref);
+
+    std::cerr << "Excecao nao tratada lancada por athrow (ref=" << exc_ref
+              << ") no PC=" << ctx.pc << "\n";
+    ctx.erro_execucao = true;
+}
+// Byte 0xC0: checkcast - Verifica se objectref (no topo) e compativel com o tipo do CP.
+// Na JVM, nao remove objectref da pilha (apenas lanca ClassCastException se falhar).
+template <typename Context>
+inline void checkcast(Context& ctx) {
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size() || !ctx.classe) {
+        std::cerr << "Erro: contexto invalido ou operandos faltando em checkcast no PC="
+                  << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t high = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t low  = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t cp_index = static_cast<uint16_t>((high << 8) | low);
+
+    const auto& cp = ctx.classe->constant_pool;
+    if (cp_index == 0 || cp_index >= cp.size()) {
+        std::cerr << "Erro: indice #" << cp_index << " fora do Constant Pool em checkcast\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em checkcast no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t obj_ref = ctx.top();
+    std::string tipo_alvo = resolver_cp_string(cp, cp[cp_index].index1);
+
+    // Em Java, null passa no checkcast sem erro
+    if (obj_ref == 0) {
+        return;
+    }
+
+    // TODO: validar tipo real de obj_ref no Heap contra tipo_alvo (ClassCastException se incompativel)
+    std::cout << "[checkcast #" << cp_index << "] ref=" << obj_ref
+              << " como " << tipo_alvo << "\n";
+}
+// Byte 0xC1: instanceof - Desempilha objectref e empilha 1 (true) ou 0 (false).
+// Se objectref == 0 (null), empilha 0 sem erro.
+template <typename Context>
+inline void instanceof_JVM(Context& ctx) {
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size() || !ctx.classe) {
+        std::cerr << "Erro: contexto invalido ou operandos faltando em instanceof no PC="
+                  << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t high = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t low  = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t cp_index = static_cast<uint16_t>((high << 8) | low);
+
+    const auto& cp = ctx.classe->constant_pool;
+    if (cp_index == 0 || cp_index >= cp.size()) {
+        std::cerr << "Erro: indice #" << cp_index << " fora do Constant Pool em instanceof\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em instanceof no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t obj_ref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (obj_ref == 0) {
+        ctx.push(INT32_C(0));
+        return;
+    }
+
+    std::string tipo_alvo = resolver_cp_string(cp, cp[cp_index].index1);
+    // TODO: verificar no Heap se obj_ref e instancia de tipo_alvo
+    std::cout << "[instanceof #" << cp_index << "] ref=" << obj_ref
+              << " instanceof " << tipo_alvo << "\n";
+    ctx.push(INT32_C(1));
+}
+// Byte 0xC2: monitorenter - Adquire monitor de objectref (lanca NullPointerException se 0)
+template <typename Context>
+inline void monitorenter(Context& ctx) {
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em monitorenter no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t obj_ref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (obj_ref == 0) {
+        std::cerr << "Erro: NullPointerException em monitorenter no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    std::cout << "[monitorenter] lock em ref=" << obj_ref << "\n";
+}
+// Byte 0xC3: monitorexit - Libera monitor de objectref (lanca NullPointerException se 0)
+template <typename Context>
+inline void monitorexit(Context& ctx) {
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em monitorexit no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t obj_ref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (obj_ref == 0) {
+        std::cerr << "Erro: NullPointerException em monitorexit no PC=" << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    std::cout << "[monitorexit] unlock em ref=" << obj_ref << "\n";
+}
+// Byte 0xC4: wide - Estende indice de variavel local para 16 bits (e constante para 16 bits em iinc)
+template <typename Context>
+inline void wide(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+
+    if (ctx.pc >= ctx.code.size()) {
+        std::cerr << "Erro: wide sem sub-opcode no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint8_t sub_op = ctx.code[ctx.pc++];
+
+    // Caso especial: wide iinc (0x84) -> indexbyte1, indexbyte2, constbyte1, constbyte2
+    if (sub_op == 0x84) {
+        if (static_cast<size_t>(ctx.pc) + 3 >= ctx.code.size()) {
+            std::cerr << "Erro: wide iinc truncado no PC=" << base_pc << "\n";
+            ctx.erro_execucao = true;
+            return;
+        }
+        uint16_t idx = static_cast<uint16_t>(
+            (static_cast<uint16_t>(ctx.code[ctx.pc]) << 8) |
+             static_cast<uint16_t>(ctx.code[ctx.pc + 1])
+        );
+        int16_t inc = ler_i16_be(ctx.code, static_cast<size_t>(ctx.pc) + 2);
+        ctx.pc += 4;
+
+        if (static_cast<size_t>(idx) >= ctx.locais.size()) {
+            std::cerr << "Erro: indice local fora dos limites em wide iinc: " << idx << "\n";
+            ctx.erro_execucao = true;
+            return;
+        }
+        ctx.locais[idx] += static_cast<int32_t>(inc);
+        return;
+    }
+
+    // Demais sub-opcodes com indice de 2 bytes:
+    // iload(0x15), fload(0x17), aload(0x19), lload(0x16), dload(0x18),
+    // istore(0x36), fstore(0x38), astore(0x3A), lstore(0x37), dstore(0x39), ret(0xA9)
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size()) {
+        std::cerr << "Erro: wide sem indice de 2 bytes no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t idx = static_cast<uint16_t>(
+        (static_cast<uint16_t>(ctx.code[ctx.pc]) << 8) |
+         static_cast<uint16_t>(ctx.code[ctx.pc + 1])
+    );
+    ctx.pc += 2;
+
+    if (static_cast<size_t>(idx) >= ctx.locais.size()) {
+        std::cerr << "Erro: indice local fora dos limites em wide: " << idx << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    switch (sub_op) {
+        case 0x15: // iload
+        case 0x17: // fload
+        case 0x19: // aload
+            ctx.push(ctx.locais[idx]);
+            break;
+
+        case 0x16: // lload (2 slots: high depois low)
+        case 0x18: // dload (2 slots: high depois low)
+            if (static_cast<size_t>(idx) + 1 >= ctx.locais.size()) {
+                std::cerr << "Erro: indice local de 2 slots fora dos limites em wide load\n";
+                ctx.erro_execucao = true;
+                return;
+            }
+            ctx.push(ctx.locais[idx]);
+            ctx.push(ctx.locais[idx + 1]);
+            break;
+
+        case 0x36: // istore
+        case 0x38: // fstore
+        case 0x3A: // astore
+            if (ctx.empty()) {
+                std::cerr << "Erro: pilha vazia em wide store\n";
+                ctx.erro_execucao = true;
+                return;
+            }
+            ctx.locais[idx] = ctx.pop();
+            break;
+
+        case 0x37: // lstore (2 slots: topo e low, proximo e high)
+        case 0x39: // dstore
+            if (ctx.size() < 2 || static_cast<size_t>(idx) + 1 >= ctx.locais.size()) {
+                std::cerr << "Erro: pilha ou variaveis locais insuficientes em wide store 2 slots\n";
+                ctx.erro_execucao = true;
+                return;
+            }
+            ctx.locais[idx + 1] = ctx.pop(); // low
+            ctx.locais[idx]     = ctx.pop(); // high
+            break;
+
+        case 0xA9: { // ret
+            int32_t addr = ctx.locais[idx];
+            if (addr < 0 || static_cast<size_t>(addr) >= ctx.code.size()) {
+                std::cerr << "Erro: endereco invalido em wide ret: " << addr << "\n";
+                ctx.erro_execucao = true;
+                return;
+            }
+            ctx.pc = static_cast<uint32_t>(addr);
+            break;
+        }
+
+        default:
+            std::cerr << "Erro: sub-opcode invalido em wide: 0x" << std::hex
+                      << static_cast<int>(sub_op) << std::dec << "\n";
+            ctx.erro_execucao = true;
+            break;
+    }
+}
+// Byte 0xC5: multianewarray - Aloca array multidimensional (2 bytes CP + 1 byte dimensions)
+template <typename Context>
+inline void multianewarray(Context& ctx) {
+    if (static_cast<size_t>(ctx.pc) + 2 >= ctx.code.size() || !ctx.classe) {
+        std::cerr << "Erro: contexto invalido ou operandos faltando em multianewarray no PC="
+                  << ctx.pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    uint16_t high = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t low  = static_cast<uint16_t>(ctx.code[ctx.pc++]);
+    uint16_t cp_index = static_cast<uint16_t>((high << 8) | low);
+    uint8_t dimensions = ctx.code[ctx.pc++];
+
+    const auto& cp = ctx.classe->constant_pool;
+    if (cp_index == 0 || cp_index >= cp.size()) {
+        std::cerr << "Erro: indice #" << cp_index << " fora do Constant Pool em multianewarray\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    if (dimensions == 0) {
+        std::cerr << "Erro: dimensions == 0 em multianewarray\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    if (ctx.size() < static_cast<int>(dimensions)) {
+        std::cerr << "Erro: pilha insuficiente para " << static_cast<int>(dimensions)
+                  << " dimensoes em multianewarray\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    std::vector<int32_t> contagens(dimensions, 0);
+    // Na pilha, count[dimensions - 1] esta no topo e count[0] esta mais abaixo
+    for (int i = static_cast<int>(dimensions) - 1; i >= 0; --i) {
+        contagens[static_cast<size_t>(i)] = ctx.pop();
+        if (ctx.erro_execucao) return;
+        if (contagens[static_cast<size_t>(i)] < 0) {
+            std::cerr << "Erro: NegativeArraySizeException em multianewarray (dim "
+                      << i << " = " << contagens[static_cast<size_t>(i)] << ")\n";
+            ctx.erro_execucao = true;
+            return;
+        }
+    }
+
+    std::string tipo_array = resolver_cp_string(cp, cp[cp_index].index1);
+    std::cout << "[multianewarray #" << cp_index << "] tipo=" << tipo_array
+              << ", dims=" << static_cast<int>(dimensions) << "\n";
+
+    // TODO: alocar estrutura multidimensional no Heap quando o Heap existir
+    ctx.push(alocar_ref_simbolica(ctx, static_cast<uint32_t>(cp_index) * 512u + dimensions));
+}
+// Byte 0xC6: ifnull - Desvia se referencia no topo da pilha for 0 (null)
+template <typename Context>
+inline void ifnull(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size()) {
+        std::cerr << "Erro: ifnull sem offset de 16 bits no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int16_t branch = ler_i16_be(ctx.code, ctx.pc);
+    ctx.pc += 2;
+
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em ifnull no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t ref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (ref == 0) {
+        uint32_t novo_pc = 0;
+        if (!aplicar_salto_relativo(base_pc, static_cast<int32_t>(branch), ctx.code.size(), novo_pc)) {
+            std::cerr << "Erro: salto invalido em ifnull no PC=" << base_pc << "\n";
+            ctx.erro_execucao = true;
+            return;
+        }
+        ctx.pc = novo_pc;
+    }
+}
+// Byte 0xC7: ifnonnull - Desvia se referencia no topo da pilha nao for 0 (nao-null)
+template <typename Context>
+inline void ifnonnull(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+
+    if (static_cast<size_t>(ctx.pc) + 1 >= ctx.code.size()) {
+        std::cerr << "Erro: ifnonnull sem offset de 16 bits no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int16_t branch = ler_i16_be(ctx.code, ctx.pc);
+    ctx.pc += 2;
+
+    if (ctx.empty()) {
+        std::cerr << "Erro: pilha vazia em ifnonnull no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t ref = ctx.pop();
+    if (ctx.erro_execucao) return;
+
+    if (ref != 0) {
+        uint32_t novo_pc = 0;
+        if (!aplicar_salto_relativo(base_pc, static_cast<int32_t>(branch), ctx.code.size(), novo_pc)) {
+            std::cerr << "Erro: salto invalido em ifnonnull no PC=" << base_pc << "\n";
+            ctx.erro_execucao = true;
+            return;
+        }
+        ctx.pc = novo_pc;
+    }
+}
+// Byte 0xC8: goto_w - Salto incondicional com deslocamento de 32 bits (4 bytes)
+template <typename Context>
+inline void goto_w(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+
+    if (static_cast<size_t>(ctx.pc) + 3 >= ctx.code.size()) {
+        std::cerr << "Erro: goto_w sem offset de 32 bits no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t branch = ler_i32_be(ctx.code, ctx.pc);
+    ctx.pc += 4;
+
+    uint32_t novo_pc = 0;
+    if (!aplicar_salto_relativo(base_pc, branch, ctx.code.size(), novo_pc)) {
+        std::cerr << "Erro: salto invalido em goto_w no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+    ctx.pc = novo_pc;
+}
+// Byte 0xC9: jsr_w - Jump subroutine com deslocamento de 32 bits (4 bytes)
+template <typename Context>
+inline void jsr_w(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+
+    if (static_cast<size_t>(ctx.pc) + 3 >= ctx.code.size()) {
+        std::cerr << "Erro: jsr_w sem offset de 32 bits no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+
+    int32_t branch = ler_i32_be(ctx.code, ctx.pc);
+    ctx.pc += 4;
+
+    // Endereco da proxima instrucao apos jsr_w (opcode de 1 byte + offset de 4 bytes)
+    uint32_t retorno_pc = base_pc + 5u;
+    ctx.push(static_cast<int32_t>(retorno_pc));
+    if (ctx.erro_execucao) return;
+
+    uint32_t novo_pc = 0;
+    if (!aplicar_salto_relativo(base_pc, branch, ctx.code.size(), novo_pc)) {
+        std::cerr << "Erro: salto invalido em jsr_w no PC=" << base_pc << "\n";
+        ctx.erro_execucao = true;
+        return;
+    }
+    ctx.pc = novo_pc;
+}
+// Byte 0xCA: breakpoint - Opcode reservado para depuradores na JVM
+template <typename Context>
+inline void breakpoint_JVM(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+    std::cerr << "Erro: opcode reservado 'breakpoint' (0xCA) encontrado no PC="
+              << base_pc << "\n";
+    ctx.erro_execucao = true;
+}
+// Byte 0xCB: impdep1 - Opcode reservado dependente da implementacao na JVM
+template <typename Context>
+inline void impdep1_JVM(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+    std::cerr << "Erro: opcode reservado 'impdep1' (0xCB) encontrado no PC="
+              << base_pc << "\n";
+    ctx.erro_execucao = true;
+}
+// Byte 0xCC: impdep2 - Opcode reservado dependente da implementacao na JVM
+template <typename Context>
+inline void impdep2_JVM(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+    std::cerr << "Erro: opcode reservado 'impdep2' (0xCC) encontrado no PC="
+              << base_pc << "\n";
+    ctx.erro_execucao = true;
+}
+// Byte 0xCC: impdep2 - Opcode reservado dependente da implementacao na JVM
+template <typename Context>
+inline void no_implementation(Context& ctx) {
+    uint32_t base_pc = (ctx.pc > 0) ? (ctx.pc - 1) : 0;
+    std::cerr << "Erro: opcode não implementado encontrado no PC="
+              << base_pc << "\n";
+}
 
 /*======TABELA HASH FUNÇÕES BYTECODE=====*/
 // Tabela hash parametrizada pelo tipo Context (instanciada no main.cpp)
@@ -1992,18 +3481,102 @@ inline const std::unordered_map<uint8_t, void (*)(Context&)>& get_instruction() 
         map[0xA5] = if_acmpeq<Context>;
         map[0xA6] = if_acmpne<Context>;
 
-        map[0xA7] = goto_JVM<Context>;
+        map[0xA7] = goto_JVM<Context>;       
+        map[0xA8] = jsr<Context>;
+        map[0xA9] = ret<Context>;
+        map[0xAA] = tableswitch<Context>;
+        map[0xAB] = lookupswitch<Context>;
 
-
+        map[0xAC] = ireturn<Context>;
+        map[0xAD] = lreturn<Context>;
+        map[0xAE] = freturn<Context>;
+        map[0xAF] = dreturn<Context>;
+        map[0xB0] = areturn<Context>;
+        map[0xB1] = return_void<Context>;
 
         map[0xB2] = getstatic_JVM<Context>;
-        map[0xBB] = getstatic_JVM<Context>;
-        map[0xB7] = getstatic_JVM<Context>;
+        map[0xB3] = putstatic_JVM<Context>;
+        map[0xB4] = getfield_JVM<Context>;
+        map[0xB5] = putfield_JVM<Context>;
         map[0xB6] = invokevirtual_JVM<Context>;
+        map[0xB7] = invokespecial_JVM<Context>;
+        map[0xB8] = invokestatic_JVM<Context>;
+        map[0xB9] = invokeinterface_JVM<Context>;
+        map[0xBA] = invokedynamic_JVM<Context>;
 
+        map[0xBB] = new_obj<Context>;
+        map[0xBC] = newarray<Context>;
+        map[0xBD] = anewarray<Context>;
+        map[0xBE] = arraylength<Context>;
+        map[0xBF] = athrow<Context>;
 
-        map[0xFE] = LOCAL<Context>;
-        map[0xFF] = TMP<Context>;
+        map[0xC0] = checkcast<Context>;
+        map[0xC1] = instanceof_JVM<Context>;
+        map[0xC2] = monitorenter<Context>;
+        map[0xC3] = monitorexit<Context>;
+        map[0xC4] = wide<Context>;
+        map[0xC5] = multianewarray<Context>;
+        map[0xC6] = ifnull<Context>;
+        map[0xC7] = ifnonnull<Context>;
+        map[0xC8] = goto_w<Context>;
+        map[0xC9] = jsr_w<Context>;
+
+        map[0xCA] = breakpoint_JVM<Context>;
+        map[0xCB] = impdep1_JVM<Context>;
+        map[0xCC] = impdep2_JVM<Context>;
+
+        map[0xCD] = no_implementation<Context>;
+        map[0xCE] = no_implementation<Context>;
+        map[0xCF] = no_implementation<Context>;
+        map[0xD0] = no_implementation<Context>;
+        map[0xD1] = no_implementation<Context>;
+        map[0xD2] = no_implementation<Context>;
+        map[0xD3] = no_implementation<Context>;
+        map[0xD4] = no_implementation<Context>;
+        map[0xD5] = no_implementation<Context>;
+        map[0xD6] = no_implementation<Context>;
+        map[0xD7] = no_implementation<Context>;
+        map[0xD8] = no_implementation<Context>;
+        map[0xD9] = no_implementation<Context>;
+        map[0xDA] = no_implementation<Context>;
+        map[0xDB] = no_implementation<Context>;
+        map[0xDC] = no_implementation<Context>;
+        map[0xDD] = no_implementation<Context>;
+        map[0xDE] = no_implementation<Context>;
+        map[0xDF] = no_implementation<Context>;
+        map[0xE0] = no_implementation<Context>;
+        map[0xE1] = no_implementation<Context>;
+        map[0xE2] = no_implementation<Context>;
+        map[0xE3] = no_implementation<Context>;
+        map[0xE4] = no_implementation<Context>;
+        map[0xE5] = no_implementation<Context>;
+        map[0xE6] = no_implementation<Context>;
+        map[0xE7] = no_implementation<Context>;
+        map[0xE8] = no_implementation<Context>;
+        map[0xE9] = no_implementation<Context>;
+        map[0xEA] = no_implementation<Context>;
+        map[0xEB] = no_implementation<Context>;
+        map[0xEC] = no_implementation<Context>;
+        map[0xED] = no_implementation<Context>;
+        map[0xEE] = no_implementation<Context>;
+        map[0xEF] = no_implementation<Context>;
+        map[0xF0] = no_implementation<Context>;
+        map[0xF1] = no_implementation<Context>;
+        map[0xF2] = no_implementation<Context>;
+        map[0xF3] = no_implementation<Context>;
+        map[0xF4] = no_implementation<Context>;
+        map[0xF5] = no_implementation<Context>;
+        map[0xF6] = no_implementation<Context>;
+        map[0xF7] = no_implementation<Context>;
+        map[0xF8] = no_implementation<Context>;
+        map[0xF9] = no_implementation<Context>;
+        map[0xFA] = no_implementation<Context>;
+        map[0xFB] = no_implementation<Context>;
+        map[0xFC] = no_implementation<Context>;
+        map[0xFD] = no_implementation<Context>;
+        map[0xFE] = no_implementation<Context>;
+        map[0xFF] = no_implementation<Context>;
+        // END OF FILE
 
         return map;
     }();
